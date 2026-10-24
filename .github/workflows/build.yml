@@ -1,0 +1,224 @@
+name: Build
+
+# Builds SOL Launcher, runs the tests and, for pushes, publishes the Windows installer and a portable zip as a rolling
+# "preview" pre-release (https://github.com/<owner>/<repo>/releases/tag/preview).
+#
+# Derived from the Prism Launcher project's build workflow (GPL-3.0). Differences: no code signing, no macOS / ARM /
+# MinGW jobs, no vcpkg NuGet cache (a plain file cache is used), and the self-updater is NOT enabled (it needs
+# Launcher_BUILD_ARTIFACT, which is deliberately left unset until SOL Launcher has proper releases).
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  QT_VERSION: "6.11.2"
+  # old python versions detect 7z files as zip, breaking aqtinstall (https://github.com/miurahr/aqtinstall/issues/1042)
+  AQTINSTALL: git+https://github.com/miurahr/aqtinstall.git@16db45a70b5905ad596941b223469bc86a56901e
+  PYTHON_VERSION: "3.15"
+
+jobs:
+  windows:
+    name: Windows (MSVC, x64)
+    runs-on: windows-2022
+
+    permissions:
+      # only used by the last step, which publishes the rolling preview release
+      contents: write
+
+    env:
+      BUILD_TYPE: Release
+      BUILD_PLATFORM: windows-ci
+      VCPKG_TRIPLET: x64-windows
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}\.vcpkg-binary-cache
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: Enter the Visual Studio developer environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: amd64
+
+      - name: Setup Java (for the helper jars)
+        uses: actions/setup-java@v6
+        with:
+          distribution: zulu
+          java-version: 17
+
+      - name: Setup Python (for aqtinstall)
+        uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          setup-python: false
+          aqtsource: ${{ env.AQTINSTALL }}
+          modules: qtimageformats qtnetworkauth
+          cache: true
+
+      - name: Prepare vcpkg
+        shell: bash
+        run: |
+          echo "Qt6_DIR=$QT_ROOT_DIR" >> "$GITHUB_ENV"
+          echo "VCPKG_ROOT=$VCPKG_INSTALLATION_ROOT" >> "$GITHUB_ENV"
+          echo "VCPKG_SUBMODULE_SHA=$(git -C cmake/vcpkg rev-parse HEAD)" >> "$GITHUB_ENV"
+          mkdir -p "$VCPKG_DEFAULT_BINARY_CACHE"
+
+      - name: Cache vcpkg packages
+        uses: actions/cache@v6.1.0
+        with:
+          path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
+          key: vcpkg-windows-${{ env.VCPKG_SUBMODULE_SHA }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
+          restore-keys: |
+            vcpkg-windows-${{ env.VCPKG_SUBMODULE_SHA }}-
+
+      - name: Configure
+        shell: bash
+        run: |
+          cmake --preset windows_msvc \
+            -D VCPKG_HOST_TRIPLET="$VCPKG_TRIPLET" -D VCPKG_TARGET_TRIPLET="$VCPKG_TRIPLET" \
+            -D ENABLE_LTO=OFF
+
+      - name: Build
+        shell: bash
+        run: cmake --build --preset windows_msvc --config "$BUILD_TYPE"
+
+      - name: Test
+        shell: bash
+        run: ctest --preset windows_msvc --build-config "$BUILD_TYPE"
+
+      - name: Package (install tree and portable)
+        shell: pwsh
+        run: |
+          cmake --install build --config $env:BUILD_TYPE
+          cp -r install install-portable  # `cmake --install` is slow on Windows, so copy instead of installing twice
+          cmake --install build --config $env:BUILD_TYPE --prefix install-portable --component portable
+          Compress-Archive -Path install-portable\* -DestinationPath SOLLauncher-Windows-Portable.zip
+
+      - name: Package (installer)
+        shell: pwsh
+        env:
+          NSCURL_VERSION: "v24.9.26.122"
+          NSCURL_SHA256: "AEE6C4BE3CB6455858E9C1EE4B3AFE0DB9960FA03FE99CCDEDC28390D57CCBB0"
+        run: |
+          New-Item -Name NSISPlugins -ItemType Directory
+          Invoke-WebRequest "https://github.com/negrutiu/nsis-nscurl/releases/download/$env:NSCURL_VERSION/NScurl.zip" -OutFile NSISPlugins\NScurl.zip
+          $hash = (Get-FileHash NSISPlugins\NScurl.zip -Algorithm Sha256).Hash
+          if ($hash -ne $env:NSCURL_SHA256) {
+            Write-Error "NScurl.zip sha256 mismatch ($hash)"
+            exit 1
+          }
+          Expand-Archive -Path NSISPlugins\NScurl.zip -DestinationPath NSISPlugins\NScurl
+
+          cd install
+          makensis -NOCD "$env:GITHUB_WORKSPACE/build/program_info/win_install.nsi"
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v7
+        with:
+          name: SOLLauncher-Windows-Setup-${{ github.sha }}
+          path: SOLLauncher-Setup.exe
+
+      - name: Upload portable zip
+        uses: actions/upload-artifact@v7
+        with:
+          name: SOLLauncher-Windows-Portable-${{ github.sha }}
+          path: SOLLauncher-Windows-Portable.zip
+
+      - name: Publish the rolling preview release
+        if: ${{ github.event_name == 'push' && github.ref_type == 'branch' && (github.ref_name == github.event.repository.default_branch || startsWith(github.ref_name, 'arena/')) }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          short="${GITHUB_SHA:0:7}"
+          cat > release-notes.md <<EOF
+          Automated **preview** build of \`${GITHUB_REF_NAME}\` at commit [\`${short}\`](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}).
+
+          - \`SOLLauncher-Setup.exe\` installs for the current user (no admin rights needed).
+          - \`SOLLauncher-Windows-Portable.zip\` runs from any folder and keeps its data next to the program.
+
+          The files are **not code-signed**, so Windows SmartScreen may warn you: choose *More info*, then *Run anyway*.
+          Microsoft sign-in needs your own Azure client ID, see \`docs/sol/MICROSOFT_SIGN_IN.md\`.
+
+          This release is replaced by every successful build of the branch.
+          EOF
+          gh release delete preview --cleanup-tag --yes || true
+          gh release create preview SOLLauncher-Setup.exe SOLLauncher-Windows-Portable.zip \
+            --prerelease --target "$GITHUB_SHA" \
+            --title "SOL Launcher preview (${short})" --notes-file release-notes.md
+
+  linux:
+    name: Linux (GCC, build and tests)
+    runs-on: ubuntu-24.04
+
+    env:
+      BUILD_TYPE: Debug
+      BUILD_PLATFORM: linux-ci
+      VCPKG_TRIPLET: x64-linux
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: Install host dependencies
+        run: |
+          sudo apt-get -y update
+          sudo apt-get -y install \
+            dpkg-dev ninja-build extra-cmake-modules pkg-config scdoc \
+            gamemode-dev libxcb-cursor-dev
+
+      - name: Setup Java (for the helper jars)
+        uses: actions/setup-java@v6
+        with:
+          distribution: zulu
+          java-version: 17
+
+      - name: Setup Python (for aqtinstall)
+        uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          setup-python: false
+          aqtsource: ${{ env.AQTINSTALL }}
+          modules: qtimageformats qtnetworkauth
+          cache: true
+
+      - name: Prepare environment
+        run: |
+          echo "Qt6_DIR=$QT_ROOT_DIR" >> "$GITHUB_ENV"
+          echo "VCPKG_ROOT=$VCPKG_INSTALLATION_ROOT" >> "$GITHUB_ENV"
+
+      - name: Configure
+        run: |
+          cmake --preset linux \
+            -D VCPKG_HOST_TRIPLET="$VCPKG_TRIPLET" -D VCPKG_TARGET_TRIPLET="$VCPKG_TRIPLET"
+
+      - name: Build
+        run: cmake --build --preset linux --config "$BUILD_TYPE"
+
+      - name: Test
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: ctest --preset linux --build-config "$BUILD_TYPE"
