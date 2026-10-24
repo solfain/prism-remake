@@ -44,6 +44,7 @@
 #include <utility>
 
 #include "InstanceView.h"
+#include "rainbow.h"
 
 VisualGroup::VisualGroup(QString text, InstanceView* view) : view(view), text(std::move(text)), collapsed(false) {}
 
@@ -139,75 +140,82 @@ VisualGroup::HitResults VisualGroup::hitScan(const QPoint& pos) const
     return results;
 }
 
+namespace {
+
+/// Group headers use a slightly smaller, semi-bold version of the application font.
+QFont groupHeaderFont()
+{
+    QFont font(QApplication::font());
+    if (font.pointSizeF() > 1.0) {
+        font.setPointSizeF(font.pointSizeF() - 0.5);
+    }
+    font.setWeight(QFont::DemiBold);
+    return font;
+}
+
+}  // namespace
+
 void VisualGroup::drawHeader(QPainter* painter, const QStyleOptionViewItem& option) const
 {
-    QRect optRect = option.rect;
-    optRect.setTop(optRect.top() + 7);
-    QFont font(QApplication::font());
-    font.setBold(true);
-    const QFontMetrics fontMetrics = QFontMetrics(font);
-    painter->setFont(font);
+    const QRect optRect = option.rect;
+    // the theme's palette, see ListViewDelegate::paint (the view's own palette is rewritten by stylesheets)
+    const QPalette palette = QApplication::palette();
+    const QFont font = groupHeaderFont();
+    const QFontMetrics fontMetrics(font);
 
-    QPen pen;
-    pen.setWidth(2);
-    QColor penColor = option.palette.text().color();
-    penColor.setAlphaF(0.6f);
-    pen.setColor(penColor);
-    painter->setPen(pen);
+    // everything is derived from the palette: a muted label, a pill with the number of instances and a hairline
+    QColor muted = palette.color(QPalette::WindowText);
+    muted.setAlphaF(0.72F);
+
+    const int centerY = optRect.top() + headerHeight() / 2;
+
+    painter->save();
     painter->setRenderHint(QPainter::Antialiasing);
 
-    // sizes and offsets, to keep things consistent below
-    const int arrowOffsetLeft = fontMetrics.height() / 2 + 7;
-    const int textOffsetLeft = arrowOffsetLeft * 2;
-    const int centerHeight = optRect.top() + fontMetrics.height() / 2;
-    const QString& textToDraw = text.isEmpty() ? QObject::tr("Ungrouped") : text;
-
-    // BEGIN: arrow
+    // BEGIN: chevron
     {
-        constexpr int arrowSize = 6;
-        QPolygon arrowPolygon;
+        const qreal chevronX = optRect.left() + 12;
+        const qreal chevronY = centerY;
+        painter->setPen(QPen(muted, 1.6, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
         if (collapsed) {
-            arrowPolygon << QPoint(arrowOffsetLeft - arrowSize / 2, centerHeight - arrowSize)
-                         << QPoint(arrowOffsetLeft + arrowSize / 2, centerHeight)
-                         << QPoint(arrowOffsetLeft - arrowSize / 2, centerHeight + arrowSize);
-            painter->drawPolyline(arrowPolygon);
+            const QPointF points[3] = { QPointF(chevronX - 1.5, chevronY - 4.0), QPointF(chevronX + 2.5, chevronY),
+                                        QPointF(chevronX - 1.5, chevronY + 4.0) };
+            painter->drawPolyline(points, 3);
         } else {
-            arrowPolygon << QPoint(arrowOffsetLeft - arrowSize, centerHeight - arrowSize / 2)
-                         << QPoint(arrowOffsetLeft, centerHeight + arrowSize / 2)
-                         << QPoint(arrowOffsetLeft + arrowSize, centerHeight - arrowSize / 2);
-            painter->drawPolyline(arrowPolygon);
+            const QPointF points[3] = { QPointF(chevronX - 4.0, chevronY - 2.0), QPointF(chevronX, chevronY + 2.0),
+                                        QPointF(chevronX + 4.0, chevronY - 2.0) };
+            painter->drawPolyline(points, 3);
         }
     }
-    // END: arrow
+    // END: chevron
 
-    // BEGIN: text
-    {
-        QRect textRect(optRect);
-        textRect.setTop(textRect.top());
-        textRect.setLeft(textOffsetLeft);
-        textRect.setHeight(fontMetrics.height());
-        textRect.setRight(textRect.right() - 7);
+    // BEGIN: group name
+    const int textLeft = optRect.left() + 26;
+    const QString name = text.isEmpty() ? QObject::tr("Ungrouped") : text;
+    const QString shownName = fontMetrics.elidedText(name, Qt::ElideRight, qMax(40, optRect.width() - textLeft - 70));
+    const int nameWidth = fontMetrics.horizontalAdvance(shownName);
+    painter->setFont(font);
+    painter->setPen(muted);
+    painter->drawText(QRect(textLeft, optRect.top(), nameWidth + 2, headerHeight()), Qt::AlignLeft | Qt::AlignVCenter, shownName);
+    // END: group name
 
-        painter->drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, textToDraw);
-    }
-    // END: text
+    // BEGIN: number of instances in the group
+    const QString countText = QString::number(items().size());
+    const QRect pill(textLeft + nameWidth + 8, centerY - 9, qMax(20, fontMetrics.horizontalAdvance(countText) + 14), 18);
+    painter->setPen(Qt::NoPen);
+    painter->setBrush(Rainbow::mix(palette.color(QPalette::Window), palette.color(QPalette::Highlight), 0.14));
+    painter->drawRoundedRect(pill, 9, 9);
+    painter->setPen(muted);
+    painter->drawText(pill, Qt::AlignCenter, countText);
+    // END: number of instances in the group
 
-    // BEGIN: horizontal line
-    {
-        penColor.setAlphaF(0.05f);
-        pen.setColor(penColor);
-        painter->setPen(pen);
-        // startPoint is left + arrow + text + space
-        const int startPoint =
-            optRect.left() + fontMetrics.height() + fontMetrics.size(Qt::AlignLeft | Qt::AlignVCenter, textToDraw).width() + 20;
-        painter->setRenderHint(QPainter::Antialiasing, false);
-        QPolygon polygon;
-        // for some reason the height (yPos) doesn't look centered, so we are adding 1 to the center height
-        const int lineHeight = centerHeight + 1;
-        polygon << QPoint(startPoint, lineHeight) << QPoint(optRect.right() - 3, lineHeight);
-        painter->drawPolyline(polygon);
-    }
-    // END: horizontal line
+    // BEGIN: hairline
+    painter->setRenderHint(QPainter::Antialiasing, false);
+    painter->setPen(QPen(palette.color(QPalette::Mid), 1));
+    painter->drawLine(pill.right() + 12, centerY, optRect.right() - 4, centerY);
+    // END: hairline
+
+    painter->restore();
 }
 
 int VisualGroup::totalHeight() const
@@ -217,20 +225,7 @@ int VisualGroup::totalHeight() const
 
 int VisualGroup::headerHeight()
 {
-    QFont font(QApplication::font());
-    font.setBold(true);
-    QFontMetrics fontMetrics(font);
-
-    const int height = fontMetrics.height() + 1 /* 1 pixel-width gradient */
-                       + 11 /* top and bottom separation */;
-    return height;
-    /*
-    int raw = view->viewport()->fontMetrics().height() + 4;
-    // add english. maybe. depends on font height.
-    if (raw % 2 == 0)
-        raw++;
-    return std::min(raw, 25);
-    */
+    return QFontMetrics(groupHeaderFont()).height() + 16;
 }
 
 int VisualGroup::contentHeight() const

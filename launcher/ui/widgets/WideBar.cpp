@@ -17,6 +17,16 @@ class ActionButton : public QToolButton {
         // workaround for breeze and breeze forks
         setProperty("_kde_toolButton_alignment", Qt::AlignLeft);
 
+        // let themes target specific actions (e.g. the primary "Launch" button) with QToolButton[solRole="..."] selectors
+        if (const QVariant role = action->property("solRole"); role.isValid()) {
+            setProperty("solRole", role);
+            // the call-to-action is a plain filled label: an icon from the user's icon theme would not be readable on the
+            // accent fill in every theme
+            if (role.toString() == QStringLiteral("launch")) {
+                setToolButtonStyle(Qt::ToolButtonTextOnly);
+            }
+        }
+
         if (m_use_default_action) {
             setDefaultAction(action);
         } else {

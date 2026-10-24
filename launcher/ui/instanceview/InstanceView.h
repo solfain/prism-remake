@@ -103,6 +103,7 @@ class InstanceView : public QAbstractItemView {
     void mouseDoubleClickEvent(QMouseEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
+    bool viewportEvent(QEvent* event) override;
 
     void dragEnterEvent(QDragEnterEvent* event) override;
     void dragMoveEvent(QDragMoveEvent* event) override;
@@ -125,11 +126,15 @@ class InstanceView : public QAbstractItemView {
     int m_bottomMargin = 5;
     int m_categoryMargin = 5;
     int m_spacing = 5;
-    int m_itemWidth = 100;
+    int m_itemWidth = 112;  // keep in sync with CardCellWidth in InstanceDelegate.cpp
     int m_currentItemsPerRow = -1;
     int m_currentCursorColumn = -1;
     mutable QCache<int, QRect> m_geometryCache;
     CatPainter* m_cat = nullptr;
+
+    // item under the mouse pointer, painted with a hover outline
+    QPersistentModelIndex m_hoverIndex;
+    void setHoverIndex(const QModelIndex& index);
 
     // point where the currently active mouse action started in geometry coordinates
     QPoint m_pressedPosition;

@@ -65,12 +65,14 @@
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QPixmap>
 #include <QProgressDialog>
 #include <QShortcut>
 #include <QStatusBar>
 #include <QTextEdit>
 #include <QToolBar>
 #include <QToolButton>
+#include <QVBoxLayout>
 #include <QWidget>
 #include <QWidgetAction>
 #include <memory>
@@ -111,6 +113,7 @@
 #include "ui/themes/ITheme.h"
 #include "ui/themes/ThemeManager.h"
 #include "ui/widgets/EditableLabel.h"
+#include "ui/widgets/SidebarButton.h"
 
 #include "minecraft/PackProfile.h"
 #include "minecraft/VersionFile.h"
@@ -156,12 +159,15 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     setAccessibleName(BuildConfig.LAUNCHER_DISPLAYNAME);
 #endif
 
+    // sidebar navigation (brand, add / folders / settings / help / update / cat, accounts)
+    setupSidebar();
+
     // instance toolbar stuff
     {
         connect(ui->instanceToolBar, &QToolBar::orientationChanged, this, &MainWindow::updateInstanceToolBarOrientation);
 
         // FIXME: why doesn't this work when done in the UI file?
-        ui->instanceToolBar->setMinimumWidth(140);
+        ui->instanceToolBar->setMinimumWidth(200);
 
         // if you try to add a widget to a toolbar in a .ui file
         // qt designer will delete it when you save the file >:(
@@ -172,7 +178,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
 
         m_changeIconButton = new QToolButton(infoWidget);
         m_changeIconButton->setObjectName(QStringLiteral("changeIconButton"));
-        m_changeIconButton->setIconSize({ ui->instanceToolBar->minimumWidth(), 80 });
+        m_changeIconButton->setIconSize({ 72, 72 });
         m_changeIconButton->setAutoRaise(true);
         updateInstanceToolIcon("default");
         m_changeIconButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -207,19 +213,13 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     }
 
     // set the menu for the folders help, accounts, and export tool buttons
+    // (the sidebar buttons open their action's menu on click, see SidebarButton)
     {
-        auto foldersMenuButton = dynamic_cast<QToolButton*>(ui->mainToolBar->widgetForAction(ui->actionFoldersButton));
         ui->actionFoldersButton->setMenu(ui->foldersMenu);
-        foldersMenuButton->setPopupMode(QToolButton::InstantPopup);
 
-        helpMenuButton = dynamic_cast<QToolButton*>(ui->mainToolBar->widgetForAction(ui->actionHelpButton));
         ui->actionHelpButton->setMenu(new QMenu(this));
         ui->actionHelpButton->menu()->addActions(ui->helpMenu->actions());
         ui->actionHelpButton->menu()->removeAction(ui->actionCheckUpdate);
-        helpMenuButton->setPopupMode(QToolButton::InstantPopup);
-
-        auto accountMenuButton = dynamic_cast<QToolButton*>(ui->mainToolBar->widgetForAction(ui->actionAccountsButton));
-        accountMenuButton->setPopupMode(QToolButton::InstantPopup);
 
         auto exportInstanceMenu = new QMenu(this);
         exportInstanceMenu->addAction(ui->actionExportInstanceZip);
@@ -245,13 +245,6 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         ui->instanceToolBar->setEnabled(false);
         setInstanceActionsEnabled(false);
 
-        // add a close button at the end of the main toolbar when running on gamescope / steam deck
-        // this is only needed on gamescope because it defaults to an X11/XWayland session and
-        // does not implement decorations
-        if (qgetenv("XDG_CURRENT_DESKTOP") == "gamescope") {
-            ui->mainToolBar->addAction(ui->actionCloseWindow);
-        }
-
         ui->actionViewJavaFolder->setEnabled(BuildConfig.JAVA_DOWNLOADER_ENABLED);
     }
 
@@ -261,7 +254,12 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     // add the toolbar toggles to the view menu
     ui->viewMenu->addAction(ui->instanceToolBar->toggleViewAction());
-    ui->viewMenu->addAction(ui->newsToolBar->toggleViewAction());
+    // without a news feed (see Launcher_NEWS_RSS_URL) there is nothing to show, so the news bar is not offered at all
+    if (!BuildConfig.NEWS_RSS_URL.isEmpty()) {
+        ui->viewMenu->addAction(ui->newsToolBar->toggleViewAction());
+    } else {
+        ui->newsToolBar->setVisible(false);
+    }
 
     updateThemeMenu();
     updateMainToolBar();
@@ -304,6 +302,26 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         updateNewsLabel();
     }
 
+    // Page header above the instance grid
+    {
+        auto* header = new QWidget(ui->centralWidget);
+        header->setObjectName(QStringLiteral("instancesHeader"));
+        auto* headerLayout = new QVBoxLayout(header);
+        // the left edge lines the title up with the group chevrons of the grid below (the grid is inset by the view's own 5 px margin)
+        headerLayout->setContentsMargins(10, 18, 22, 6);
+        headerLayout->setSpacing(2);
+
+        m_instancesTitle = new QLabel(header);
+        m_instancesTitle->setObjectName(QStringLiteral("instancesTitle"));
+        headerLayout->addWidget(m_instancesTitle);
+
+        m_instancesSubtitle = new QLabel(header);
+        m_instancesSubtitle->setObjectName(QStringLiteral("instancesSubtitle"));
+        headerLayout->addWidget(m_instancesSubtitle);
+
+        ui->verticalLayout->addWidget(header);
+    }
+
     // Create the instance list widget
     {
         view = new InstanceView(ui->centralWidget);
@@ -331,12 +349,17 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         view->setSourceOfGroupCollapseStatus(
             [](const QString& groupName) -> bool { return APPLICATION->instances()->isGroupCollapsed(groupName); });
         connect(view, &InstanceView::groupStateChanged, APPLICATION->instances(), &InstanceList::on_GroupStateChanged);
-        ui->horizontalLayout->addWidget(view);
+        ui->verticalLayout->addWidget(view);
+
+        // keep the "N instances in M groups" line of the header current
+        connect(proxymodel, &QAbstractItemModel::rowsInserted, this, &MainWindow::updateInstancesSubtitle);
+        connect(proxymodel, &QAbstractItemModel::rowsRemoved, this, &MainWindow::updateInstancesSubtitle);
+        connect(proxymodel, &QAbstractItemModel::modelReset, this, &MainWindow::updateInstancesSubtitle);
+        connect(proxymodel, &QAbstractItemModel::layoutChanged, this, &MainWindow::updateInstancesSubtitle);
     }
     // The cat background
     {
-        // set the cat action priority here so you can still see the action in qt designer
-        ui->actionCAT->setPriority(QAction::LowPriority);
+        // (upstream marks the cat action as low priority so the old toolbar showed it icon-only; the sidebar shows its label)
         updateCatState();
         connect(ui->actionCAT, &QAction::toggled, this, &MainWindow::onCatToggled);
         connect(APPLICATION, &Application::currentCatChanged, this, &MainWindow::onCatChanged);
@@ -377,11 +400,6 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     statusBar()->addPermanentWidget(m_statusLeft, 1);
     statusBar()->addPermanentWidget(m_statusCenter, 0);
 
-    // Add "manage accounts" button, right align
-    QWidget* spacer = new QWidget();
-    spacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    ui->mainToolBar->insertWidget(ui->actionAccountsButton, spacer);
-
     // Use undocumented property... https://stackoverflow.com/questions/7121718/create-a-scrollbar-in-a-submenu-qt
     ui->accountsMenu->setStyleSheet("QMenu { menu-scrollable: 1; }");
 
@@ -401,7 +419,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     // auto accounts = APPLICATION->accounts();
 
     // load the news
-    {
+    if (!BuildConfig.NEWS_RSS_URL.isEmpty()) {
         m_newsChecker->reloadNews();
         updateNewsLabel();
     }
@@ -430,6 +448,100 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     retranslateUi();
 }
 
+void MainWindow::setupSidebar()
+{
+    // The main toolbar is the sidebar. It hosts one container widget: unlike the buttons QToolBar creates for its actions
+    // (preferred width, centred), custom widgets are stretched across the whole toolbar, which is what a sidebar needs.
+    auto* container = new QWidget(ui->mainToolBar);
+    container->setObjectName(QStringLiteral("sidebarContainer"));
+    container->setMinimumWidth(212);
+    auto* sidebarLayout = new QVBoxLayout(container);
+    sidebarLayout->setContentsMargins(10, 14, 10, 12);
+    sidebarLayout->setSpacing(2);
+
+    // brand: logo, product name and version
+    {
+        auto* brand = new QWidget(container);
+        auto* brandLayout = new QHBoxLayout(brand);
+        brandLayout->setContentsMargins(6, 0, 6, 14);
+        brandLayout->setSpacing(10);
+
+        auto* logoLabel = new QLabel(brand);
+        const QSize logoSize(36, 36);
+        logoLabel->setPixmap(APPLICATION->logo().pixmap(logoSize, devicePixelRatioF()));
+        logoLabel->setFixedSize(logoSize);
+        brandLayout->addWidget(logoLabel);
+
+        auto* brandText = new QVBoxLayout();
+        brandText->setSpacing(0);
+        auto* brandName = new QLabel(BuildConfig.LAUNCHER_DISPLAYNAME, brand);
+        brandName->setObjectName(QStringLiteral("sidebarBrandName"));
+        brandText->addWidget(brandName);
+        auto* brandVersion = new QLabel(BuildConfig.versionString(), brand);
+        brandVersion->setObjectName(QStringLiteral("sidebarBrandTag"));
+        brandText->addWidget(brandVersion);
+        brandLayout->addLayout(brandText);
+        brandLayout->addStretch(1);
+
+        sidebarLayout->addWidget(brand);
+    }
+
+    // The buttons only mirror the existing actions; every action keeps its slot and shortcut.
+    auto addButton = [container, sidebarLayout](QAction* action, const char* buttonRole = nullptr) {
+        auto* button = new SidebarButton(action, container);
+        if (buttonRole != nullptr) {
+            button->setProperty("solRole", QString::fromLatin1(buttonRole));
+        }
+        sidebarLayout->addWidget(button);
+        return button;
+    };
+
+    // the call-to-action is a plain filled label: icons come from the user's icon theme and would not be readable on
+    // the accent fill in every theme
+    addButton(ui->actionAddInstance, "primary")->setToolButtonStyle(Qt::ToolButtonTextOnly);
+    sidebarLayout->addSpacing(10);
+    addButton(ui->actionFoldersButton);
+    addButton(ui->actionSettings);
+    helpMenuButton = addButton(ui->actionHelpButton);
+    addButton(ui->actionCheckUpdate);
+    addButton(ui->actionCAT);
+    sidebarLayout->addStretch(1);
+
+    // add a close button above the account when running on gamescope / steam deck
+    // this is only needed on gamescope because it defaults to an X11/XWayland session and
+    // does not implement decorations
+    if (qgetenv("XDG_CURRENT_DESKTOP") == "gamescope") {
+        addButton(ui->actionCloseWindow);
+    }
+    addButton(ui->actionAccountsButton, "account");
+
+    ui->mainToolBar->addWidget(container);
+    ui->mainToolBar->setMovable(false);
+}
+
+void MainWindow::updateInstancesSubtitle()
+{
+    const int instanceCount = proxymodel != nullptr ? proxymodel->rowCount() : 0;
+    const auto groupCount = APPLICATION->instances()->getGroups().size();
+
+    QString text;
+    if (instanceCount == 0) {
+        text = tr("No instances yet");
+    } else if (groupCount > 0) {
+        text = tr("%1 instances in %2 groups").arg(instanceCount).arg(groupCount);
+        if (instanceCount == 1 && groupCount == 1) {
+            text = tr("1 instance in 1 group");
+        } else if (instanceCount == 1) {
+            text = tr("1 instance in %1 groups").arg(groupCount);
+        } else if (groupCount == 1) {
+            text = tr("%1 instances in 1 group").arg(instanceCount);
+        }
+    } else {
+        text = instanceCount == 1 ? tr("1 instance") : tr("%1 instances").arg(instanceCount);
+    }
+    m_instancesSubtitle->setText(text);
+}
+
 // macOS always has a native menu bar, so these fixes are not applicable
 // Other systems may or may not have a native menu bar (most do not - it seems like only Ubuntu Unity does)
 #ifndef Q_OS_MAC
@@ -452,6 +564,9 @@ void MainWindow::retranslateUi()
     }
 
     ui->retranslateUi(this);
+
+    m_instancesTitle->setText(tr("Instances"));
+    updateInstancesSubtitle();
 
     MinecraftAccountPtr defaultAccount = APPLICATION->accounts()->defaultAccount();
     if (defaultAccount) {
@@ -492,7 +607,6 @@ void MainWindow::setStatusBarVisibility(bool state)
 }
 void MainWindow::lockToolbars(bool state)
 {
-    ui->mainToolBar->setMovable(!state);
     ui->instanceToolBar->setMovable(!state);
     ui->newsToolBar->setMovable(!state);
     APPLICATION->settings()->set("ToolbarsLocked", state);
@@ -946,8 +1060,9 @@ void MainWindow::processURLs(QList<QUrl> urls)
                 } else {
                     CustomMessageBox::selectable(
                         this, tr("Error"),
-                        tr("Unsupported Modrinth link.\n\nPrism Launcher currently only supports modpack links such as "
-                           "modrinth://modpack/fabulously-optimized."),
+                        tr("Unsupported Modrinth link.\n\n%1 currently only supports modpack links such as "
+                           "modrinth://modpack/fabulously-optimized.")
+                            .arg(BuildConfig.LAUNCHER_DISPLAYNAME),
                         QMessageBox::Critical)
                         ->show();
                 }

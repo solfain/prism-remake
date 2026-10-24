@@ -6,12 +6,12 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
-    <height>600</height>
+    <width>1040</width>
+    <height>680</height>
    </rect>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <layout class="QHBoxLayout" name="horizontalLayout">
+   <layout class="QVBoxLayout" name="verticalLayout">
     <property name="spacing">
      <number>0</number>
     </property>
@@ -32,32 +32,23 @@
   <widget class="QStatusBar" name="statusBar"/>
   <widget class="QToolBar" name="mainToolBar">
    <property name="windowTitle">
-    <string>Main Toolbar</string>
+    <string>Sidebar</string>
    </property>
    <property name="allowedAreas">
-    <set>Qt::ToolBarArea::BottomToolBarArea|Qt::ToolBarArea::TopToolBarArea</set>
+    <set>Qt::ToolBarArea::LeftToolBarArea</set>
    </property>
-   <property name="toolButtonStyle">
-    <enum>Qt::ToolButtonStyle::ToolButtonTextBesideIcon</enum>
+   <property name="movable">
+    <bool>false</bool>
    </property>
    <property name="floatable">
     <bool>false</bool>
    </property>
    <attribute name="toolBarArea">
-    <enum>TopToolBarArea</enum>
+    <enum>LeftToolBarArea</enum>
    </attribute>
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
-   <addaction name="actionAddInstance"/>
-   <addaction name="separator"/>
-   <addaction name="actionFoldersButton"/>
-   <addaction name="actionSettings"/>
-   <addaction name="actionHelpButton"/>
-   <addaction name="actionCheckUpdate"/>
-   <addaction name="separator"/>
-   <addaction name="actionCAT"/>
-   <addaction name="actionAccountsButton"/>
   </widget>
   <widget class="QToolBar" name="newsToolBar">
    <property name="windowTitle">
@@ -335,6 +326,9 @@
    </property>
   </action>
   <action name="actionLaunchInstance">
+   <property name="solRole" stdset="0">
+    <string notr="true">launch</string>
+   </property>
    <property name="icon">
     <iconset theme="launch"/>
    </property>
@@ -346,6 +340,9 @@
    </property>
   </action>
   <action name="actionKillInstance">
+   <property name="solRole" stdset="0">
+    <string notr="true">danger</string>
+   </property>
    <property name="icon">
     <iconset theme="status-bad"/>
    </property>
@@ -418,6 +415,9 @@
    </property>
   </action>
   <action name="actionDeleteInstance">
+   <property name="solRole" stdset="0">
+    <string notr="true">danger</string>
+   </property>
    <property name="icon">
     <iconset theme="delete"/>
    </property>
@@ -461,7 +461,7 @@
     <iconset theme="launcher"/>
    </property>
    <property name="text">
-    <string>Prism Launcher (zip)</string>
+    <string>SOL Launcher (zip)</string>
    </property>
   </action>
   <action name="actionExportInstanceMrPack">

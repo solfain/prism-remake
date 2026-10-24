@@ -61,6 +61,8 @@ InstanceView::InstanceView(QWidget* parent) : QAbstractItemView(parent)
     setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     setAcceptDrops(true);
     setAutoScroll(true);
+    // needed for the hover outline of the instance cards
+    viewport()->setMouseTracking(true);
     setPaintCat(APPLICATION->settings()->get("TheCat").toBool());
     connect(verticalScrollBar(), &QScrollBar::valueChanged, viewport(), QOverload<>::of(&QWidget::update));
     connect(horizontalScrollBar(), &QScrollBar::valueChanged, viewport(), QOverload<>::of(&QWidget::update));
@@ -310,6 +312,8 @@ void InstanceView::mouseMoveEvent(QMouseEvent* event)
 {
     executeDelayedItemsLayout();
 
+    setHoverIndex(indexAt(event->pos()));
+
     QPoint topLeft;
     QPoint visualPos = event->pos();
     QPoint geometryPos = event->pos() + offset();
@@ -429,6 +433,30 @@ void InstanceView::mouseDoubleClickEvent(QMouseEvent* event)
     }
 }
 
+void InstanceView::setHoverIndex(const QModelIndex& index)
+{
+    if (m_hoverIndex == index) {
+        return;
+    }
+    // repaint the item that lost the hover outline and the one that got it
+    const QModelIndex previous = m_hoverIndex;
+    m_hoverIndex = index;
+    if (previous.isValid()) {
+        viewport()->update(visualRect(previous));
+    }
+    if (index.isValid()) {
+        viewport()->update(visualRect(index));
+    }
+}
+
+bool InstanceView::viewportEvent(QEvent* event)
+{
+    if (event->type() == QEvent::Leave) {
+        setHoverIndex(QModelIndex());
+    }
+    return QAbstractItemView::viewportEvent(event);
+}
+
 void InstanceView::setPaintCat(bool visible)
 {
     if (m_cat) {
@@ -458,41 +486,51 @@ void InstanceView::paintEvent([[maybe_unused]] QPaintEvent* event)
 
     if (model()->rowCount() == 0) {
         painter.save();
-        QString emptyString = tr("Welcome!") + "\n" + tr("Click \"Add Instance\" to get started.");
-
-        // calculate the rect for the overlay
         painter.setRenderHint(QPainter::Antialiasing, true);
-        QFont font("sans", 20);
-        font.setBold(true);
+        painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
 
-        QRect bounds = viewport()->geometry();
-        bounds.moveTop(0);
-        auto innerBounds = bounds;
-        innerBounds.adjust(10, 10, -10, -10);
+        // A quiet welcome: the logo, a title and a hint, centred in the empty view.
+        const QRect bounds = viewport()->rect();
+        const QColor titleColor = QApplication::palette().color(QPalette::WindowText);
+        QColor hintColor = titleColor;
+        hintColor.setAlphaF(0.65F);
 
-        QColor background = QApplication::palette().color(QPalette::WindowText);
-        QColor foreground = QApplication::palette().color(QPalette::Base);
-        foreground.setAlpha(190);
-        painter.setFont(font);
-        auto fontMetrics = painter.fontMetrics();
-        auto textRect = fontMetrics.boundingRect(innerBounds, Qt::AlignHCenter | Qt::TextWordWrap, emptyString);
-        textRect.moveCenter(bounds.center());
+        QFont titleFont(font());
+        if (titleFont.pointSizeF() > 1.0) {
+            titleFont.setPointSizeF(titleFont.pointSizeF() + 6.0);
+        }
+        titleFont.setWeight(QFont::DemiBold);
+        const QFontMetrics titleMetrics(titleFont);
+        const QFontMetrics hintMetrics(font());
 
-        auto wrapRect = textRect;
-        wrapRect.adjust(-10, -10, 10, 10);
+        constexpr int logoSide = 64;
+        constexpr int blockGap = 14;
+        const int hintWidth = qMin(bounds.width() - 40, 360);
+        const QString welcomeText = tr("Welcome!");
+        const QString hintText = tr("Click \"Add Instance\" to get started.");
+        const QRect hintSize = hintMetrics.boundingRect(QRect(0, 0, hintWidth, 0), Qt::AlignHCenter | Qt::TextWordWrap, hintText);
+
+        const int blockHeight = logoSide + blockGap + titleMetrics.height() + 4 + hintSize.height();
+        const int blockTop = bounds.top() + qMax(0, (bounds.height() - blockHeight) / 2);
+        const QRect logoRect(bounds.center().x() - logoSide / 2, blockTop, logoSide, logoSide);
+        const QRect titleRect(bounds.left(), logoRect.bottom() + 1 + blockGap, bounds.width(), titleMetrics.height());
+        const QRect hintRect(bounds.center().x() - hintWidth / 2, titleRect.bottom() + 1 + 4, hintWidth, hintSize.height());
 
         // check if we are allowed to draw in our area
-        if (!event->rect().intersects(wrapRect)) {
+        if (!event->rect().intersects(logoRect.united(hintRect))) {
+            painter.restore();
             return;
         }
 
-        painter.setBrush(QBrush(background));
-        painter.setPen(foreground);
-        painter.drawRoundedRect(wrapRect, 5.0, 5.0);
+        APPLICATION->logo().paint(&painter, logoRect);
 
-        painter.setPen(foreground);
-        painter.setFont(font);
-        painter.drawText(textRect, Qt::AlignHCenter | Qt::TextWordWrap, emptyString);
+        painter.setFont(titleFont);
+        painter.setPen(titleColor);
+        painter.drawText(titleRect, Qt::AlignHCenter | Qt::AlignVCenter, welcomeText);
+
+        painter.setFont(font());
+        painter.setPen(hintColor);
+        painter.drawText(hintRect, Qt::AlignHCenter | Qt::TextWordWrap, hintText);
 
         painter.restore();
         return;
@@ -521,6 +559,7 @@ void InstanceView::paintEvent([[maybe_unused]] QPaintEvent* event)
         Qt::ItemFlags flags = index.flags();
         option.rect = visualRect(index);
         option.features |= QStyleOptionViewItem::WrapText;
+        option.state.setFlag(QStyle::State_MouseOver, m_hoverIndex == index);
         if (flags & Qt::ItemIsSelectable && selectionModel()->isSelected(index)) {
             option.state |= selectionModel()->isSelected(index) ? QStyle::State_Selected : QStyle::State_None;
         } else {

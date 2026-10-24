@@ -219,6 +219,11 @@ class MainWindow : public QMainWindow {
    private:
     void retranslateUi();
 
+    /// fills the main toolbar, which acts as the sidebar (brand, navigation, accounts)
+    void setupSidebar();
+    /// refreshes the "N instances in M groups" line below the page title
+    void updateInstancesSubtitle();
+
     void updateInstanceToolBarOrientation(Qt::Orientation orientation);
 
     void addInstance(const QString& url = QString(), const QMap<QString, QString>& extra_info = {});
@@ -240,6 +245,8 @@ class MainWindow : public QMainWindow {
     InstanceView* view = nullptr;
     InstanceProxyModel* proxymodel = nullptr;
     QToolButton* newsLabel = nullptr;
+    QLabel* m_instancesTitle = nullptr;
+    QLabel* m_instancesSubtitle = nullptr;
     QLabel* m_statusLeft = nullptr;
     QLabel* m_statusCenter = nullptr;
     QToolButton* m_changeIconButton = nullptr;
