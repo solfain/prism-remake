@@ -43,7 +43,8 @@ jobs:
       BUILD_TYPE: Release
       BUILD_PLATFORM: windows-ci
       VCPKG_TRIPLET: x64-windows
-      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}\.vcpkg-binary-cache
+      # C: has tens of GB free, the workspace drive (D:) only about 14: a Qt install, vcpkg build trees and a Release build of this size fill it
+      VCPKG_DEFAULT_BINARY_CACHE: C:\vcpkg-binary-cache
 
     steps:
       - name: Checkout
@@ -93,6 +94,13 @@ jobs:
           restore-keys: |
             vcpkg-windows-${{ env.VCPKG_SUBMODULE_SHA }}-
 
+      - name: "Put the build tree on the C: drive"
+        shell: pwsh
+        run: |
+          # The presets build in ./build. A junction sends it to the big drive; every later step keeps using "build" unchanged.
+          New-Item -ItemType Directory -Force C:\sol-build | Out-Null
+          New-Item -ItemType Junction -Path "$env:GITHUB_WORKSPACE\build" -Target C:\sol-build | Out-Null
+
       - name: Configure
         shell: bash
         env:
@@ -103,9 +111,17 @@ jobs:
           bash .github/scripts/ci-run.sh "Configure" cmake --preset windows_msvc \
             -D VCPKG_HOST_TRIPLET="$VCPKG_TRIPLET" -D VCPKG_TARGET_TRIPLET="$VCPKG_TRIPLET" \
             -D ENABLE_LTO=OFF \
+            -D VCPKG_INSTALL_OPTIONS=--clean-after-build \
             -D Launcher_VERSION_CHANNEL=preview \
             -D Launcher_MSA_CLIENT_ID="$SOL_MSA_CLIENT_ID" \
             -D Launcher_CURSEFORGE_API_KEY="$SOL_CURSEFORGE_API_KEY"
+
+      - name: Disk space after configure
+        if: always()
+        shell: pwsh
+        run: |
+          $lines = Get-PSDrive -PSProvider FileSystem | Where-Object { $_.Used -gt 0 } | ForEach-Object { "{0}: {1:N1} GB free of {2:N1} GB" -f $_.Name, ($_.Free / 1GB), (($_.Used + $_.Free) / 1GB) }
+          Write-Host "::notice title=Disk space after configure::$($lines -join '%0A')"
 
       - name: Save the vcpkg package cache
         if: ${{ always() && steps.vcpkg-cache.outputs.cache-hit != 'true' }}
@@ -117,6 +133,16 @@ jobs:
       - name: Build
         shell: bash
         run: bash .github/scripts/ci-run.sh "Build" cmake --build --preset windows_msvc --config "$BUILD_TYPE"
+
+      - name: Disk space after the build
+        if: always()
+        shell: pwsh
+        run: |
+          $lines = Get-PSDrive -PSProvider FileSystem | Where-Object { $_.Used -gt 0 } | ForEach-Object { "{0}: {1:N1} GB free of {2:N1} GB" -f $_.Name, ($_.Free / 1GB), (($_.Used + $_.Free) / 1GB) }
+          $sizes = foreach ($dir in 'C:\sol-build', 'C:\vcpkg-binary-cache', "$env:GITHUB_WORKSPACE\cmake\vcpkg", $env:QT_ROOT_DIR) {
+            if (Test-Path $dir) { "{0}: {1:N1} GB" -f $dir, ((Get-ChildItem $dir -Recurse -File -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum / 1GB) }
+          }
+          Write-Host "::notice title=Disk space after the build::$(($lines + $sizes) -join '%0A')"
 
       - name: Test
         shell: bash
