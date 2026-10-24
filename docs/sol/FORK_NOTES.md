@@ -31,18 +31,16 @@ paths are untouched, and the program degrades gracefully:
 
 | Key | Without it | How to provide it |
 | --- | --- | --- |
-| Microsoft client ID | "Add Microsoft account" is hidden, so online play needs a key | `-DLauncher_MSA_CLIENT_ID=...` or **Settings > APIs** |
+| Microsoft client ID | no account can be added (offline accounts need a Microsoft one first); "Add Microsoft account" opens a guided setup instead of failing | the `SOL_MSA_CLIENT_ID` CI variable, `-DLauncher_MSA_CLIENT_ID=...`, the in-app setup, or **Settings > APIs** |
 | CurseForge API key | CurseForge browsing and pack lookups are disabled | `-DLauncher_CURSEFORGE_API_KEY=...` or **Settings > APIs** |
 | Imgur client ID | the screenshot "Upload" action is hidden | `-DLauncher_IMGUR_CLIENT_ID=...` |
 
 ### Getting a Microsoft client ID
 
-Register an application in the Microsoft Entra admin center ("App registrations"), supporting personal Microsoft
-accounts, as a public client. Add these redirect URIs: `http://localhost` (loopback sign-in) and
-`sollauncher://oauth/microsoft` (used when the launcher's URL scheme is registered). The second one is derived from the
-binary name, so it differs from Prism Launcher's, which is another reason a Prism client ID cannot simply be reused.
-Mojang currently also requires new app registrations to be approved before Minecraft sign-in works; see
-<https://aka.ms/AppRegInfo>.
+See [MICROSOFT_SIGN_IN.md](MICROSOFT_SIGN_IN.md): registering the application (personal accounts, public client, the
+redirect URIs `http://localhost` and `sollauncher://oauth/microsoft`, public client flows on), Mojang's approval
+(<https://aka.ms/AppRegInfo>), and how to ship the ID in every build. The second redirect URI is derived from the binary
+name, so it differs from Prism Launcher's, which is another reason a Prism client ID cannot simply be reused.
 
 If you have the Prism Launcher team's permission to reuse their registrations and want to restore the old defaults, copy
 the three values from the upstream `CMakeLists.txt` into your configure command line. That is deliberately not the

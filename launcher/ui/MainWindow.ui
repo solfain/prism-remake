@@ -317,6 +317,17 @@
     <string>Manage &amp;Skins...</string>
    </property>
   </action>
+  <action name="actionAddMicrosoftAccount">
+   <property name="icon">
+    <iconset theme="new"/>
+   </property>
+   <property name="text">
+    <string>Add &amp;Microsoft account...</string>
+   </property>
+   <property name="toolTip">
+    <string>Sign in with your Microsoft account to play online.</string>
+   </property>
+  </action>
   <action name="actionManageAccounts">
    <property name="icon">
     <iconset theme="accounts"/>

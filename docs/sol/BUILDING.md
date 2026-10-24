@@ -92,7 +92,7 @@ All of these are CMake cache variables (`-DName=value`); the defaults live in th
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `Launcher_MSA_CLIENT_ID` | *(empty)* | Your Microsoft Entra / Azure application (client) ID. Without it the "Add Microsoft account" action is hidden. |
+| `Launcher_MSA_CLIENT_ID` | *(empty)* | Your Microsoft Entra application (client) ID. Without it "Add Microsoft account" opens a guided setup (see [MICROSOFT_SIGN_IN.md](MICROSOFT_SIGN_IN.md)). |
 | `Launcher_CURSEFORGE_API_KEY` | *(empty)* | Your CurseForge API key. Without it CurseForge browsing and pack lookups are disabled. |
 | `Launcher_IMGUR_CLIENT_ID` | *(empty)* | Your Imgur client ID. Without it the screenshot "Upload" action is hidden. |
 | `Launcher_META_URL` | Prism Launcher project's metadata | Where Minecraft / loader version lists come from. |

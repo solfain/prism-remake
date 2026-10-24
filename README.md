@@ -58,10 +58,12 @@ Step-by-step instructions for Windows (MSVC + vcpkg) and Linux are in [docs/sol/
 
 ### API keys
 
-SOL Launcher does not ship Prism Launcher's API keys. Until you provide your own, **Microsoft sign-in, CurseForge and
-Imgur uploads are switched off** (everything else works). You can supply them at build time
-(`-DLauncher_MSA_CLIENT_ID=...`, `-DLauncher_CURSEFORGE_API_KEY=...`) or at run time in **Settings > APIs**.
-Details and the reasoning are in [docs/sol/FORK_NOTES.md](docs/sol/FORK_NOTES.md).
+SOL Launcher does not ship Prism Launcher's API keys. Until you provide your own, **CurseForge and Imgur uploads are
+switched off**, and **Microsoft sign-in needs an application ID of your own**: *Add Microsoft account...* opens a short
+guided setup that walks through registering one and takes the result, and a build that ships an ID (set the
+`SOL_MSA_CLIENT_ID` repository variable and CI bakes it in) never shows it. Everything else works without keys. See
+[docs/sol/MICROSOFT_SIGN_IN.md](docs/sol/MICROSOFT_SIGN_IN.md); the reasoning behind the keys is in
+[docs/sol/FORK_NOTES.md](docs/sol/FORK_NOTES.md).
 
 ## Where your data lives
 
@@ -78,6 +80,7 @@ a portable install.
 
 - [Building SOL Launcher](docs/sol/BUILDING.md)
 - [Design notes: palette, themes, layout, logo](docs/sol/DESIGN.md)
+- [Microsoft sign-in: registering the OAuth application, Mojang approval, shipping the ID](docs/sol/MICROSOFT_SIGN_IN.md)
 - [Fork notes: relationship to Prism Launcher, API keys, services, upstream sync](docs/sol/FORK_NOTES.md)
 - [What changed compared to the Prism Launcher baseline](docs/sol/CHANGES.md)
 

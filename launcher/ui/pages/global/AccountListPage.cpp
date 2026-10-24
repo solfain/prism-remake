@@ -47,6 +47,7 @@
 #include "ui/dialogs/ChooseOfflineNameDialog.h"
 #include "ui/dialogs/CustomMessageBox.h"
 #include "ui/dialogs/MSALoginDialog.h"
+#include "ui/dialogs/MsaSetupDialog.h"
 
 #include "Application.h"
 
@@ -83,11 +84,9 @@ AccountListPage::AccountListPage(QWidget* parent) : QMainWindow(parent), ui(new 
 
     updateButtonStates();
 
-    // Xbox authentication won't work without a client identifier, so disable the button if it is missing
-    if (~APPLICATION->capabilities() & Application::SupportsMSA) {
-        ui->actionAddMicrosoft->setVisible(false);
-        ui->actionAddMicrosoft->setToolTip(tr("No Microsoft Authentication client ID was set."));
-    }
+    // NOTE: "Add Microsoft" is deliberately never hidden. Builds without a client ID used to hide it, which left no way to add
+    // any account at all (offline accounts need a Microsoft account first). It now starts a guided setup instead, see
+    // on_actionAddMicrosoft_triggered().
 }
 
 AccountListPage::~AccountListPage()
@@ -129,6 +128,10 @@ void AccountListPage::listChanged()
 
 void AccountListPage::on_actionAddMicrosoft_triggered()
 {
+    if (!MsaSetupDialog::ensureClientId(this)) {
+        return;
+    }
+
     auto account = MSALoginDialog::newAccount(this);
     if (account) {
         m_accounts->addAccount(account);

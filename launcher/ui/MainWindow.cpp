@@ -102,6 +102,8 @@
 #include "ui/dialogs/ExportInstanceDialog.h"
 #include "ui/dialogs/ExportPackDialog.h"
 #include "ui/dialogs/IconPickerDialog.h"
+#include "ui/dialogs/MSALoginDialog.h"
+#include "ui/dialogs/MsaSetupDialog.h"
 #include "ui/dialogs/ImportResourceDialog.h"
 #include "ui/dialogs/NewInstanceDialog.h"
 #include "ui/dialogs/NewsDialog.h"
@@ -822,6 +824,7 @@ void MainWindow::repopulateAccountsMenu()
     connect(ui->actionNoDefaultAccount, &QAction::triggered, this, &MainWindow::changeActiveAccount);
 
     ui->accountsMenu->addSeparator();
+    ui->accountsMenu->addAction(ui->actionAddMicrosoftAccount);
     ui->accountsMenu->addAction(ui->actionManageSkins);
     ui->accountsMenu->addAction(ui->actionManageAccounts);
 
@@ -1524,6 +1527,23 @@ void MainWindow::on_actionManageSkins_triggered()
     if (account && (account->accountType() == AccountType::MSA) && !account->isActive()) {
         SkinManageDialog dialog(this, account);
         dialog.exec();
+    }
+}
+
+void MainWindow::on_actionAddMicrosoftAccount_triggered()
+{
+    // without a client ID (a build that does not ship one) this first walks through registering one
+    if (!MsaSetupDialog::ensureClientId(this)) {
+        return;
+    }
+
+    auto account = MSALoginDialog::newAccount(this);
+    if (account) {
+        auto* accounts = APPLICATION->accounts();
+        accounts->addAccount(account);
+        if (accounts->count() == 1) {
+            accounts->setDefaultAccount(account);
+        }
     }
 }
 

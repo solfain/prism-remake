@@ -725,3 +725,39 @@ EditableLabel QTextEdit:disabled {
     border-color: transparent;
     color: @inkFaint@;
 }
+
+/* ------------------------------------------------ dialog building blocks (solRole) */
+QLabel[solRole="heading"] {
+    color: @ink@;
+    font-size: 18px;
+    font-weight: 700;
+}
+QLabel[solRole="hint"] {
+    color: @inkMuted@;
+}
+QLabel[solRole="ok"] {
+    color: @success@;
+}
+QLabel[solRole="error"] {
+    color: @danger@;
+}
+/* numbered step badges */
+QLabel[solRole="stepBadge"] {
+    background-color: @accentSoftStrong@;
+    color: @accent@;
+    border-radius: 12px;
+    font-weight: 700;
+}
+/* IDs, URIs and other values that are copied or pasted */
+QLineEdit[solRole="code"] {
+    font-family: "Cascadia Mono", "Consolas", "DejaVu Sans Mono", "Menlo", monospace;
+}
+QLineEdit[solRole="code"]:read-only {
+    background-color: @surfaceAlt@;
+}
+/* a quiet box for a note that matters */
+QWidget[solRole="callout"] {
+    background-color: @accentSoft@;
+    border: 1px solid @border@;
+    border-radius: 10px;
+}

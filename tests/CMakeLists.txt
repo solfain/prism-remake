@@ -25,6 +25,7 @@ set(TEST_SOURCES
     MetaComponentParse_test.cpp
     CatPack_test.cpp
     SolTheme_test.cpp
+    MsaSetup_test.cpp
     XmlLogs_test.cpp
     Commandline_test.cpp
 )
