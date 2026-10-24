@@ -21,9 +21,12 @@
 #include <QFile>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QIcon>
 #include <QObject>
+#include <QStyleFactory>
 
 #include "rainbow.h"
+#include "ui/themes/HintOverrideProxyStyle.h"
 #include "ui/themes/ThemeManager.h"
 
 namespace {
@@ -145,6 +148,48 @@ double SolTheme::fadeAmount()
 QColor SolTheme::fadeColor()
 {
     return token("bg");
+}
+
+namespace {
+/*!
+ * The one place where a stock colour (a saturated yellow triangle, a red disc, a blue speech bubble) used to reach the screen
+ * is the icon of a message box. With the SOL line icons active they come from that icon set, so a warning is the palette's
+ * amber, an error its red, and the whole dialog stays in one voice. Any other icon theme keeps the platform's icons.
+ */
+class SolStyle : public HintOverrideProxyStyle {
+   public:
+    using HintOverrideProxyStyle::HintOverrideProxyStyle;
+
+    QIcon standardIcon(StandardPixmap pixmap, const QStyleOption* option, const QWidget* widget) const override
+    {
+        const char* name = nullptr;
+        switch (pixmap) {
+            case SP_MessageBoxWarning:
+                name = "status-yellow";
+                break;
+            case SP_MessageBoxCritical:
+                name = "status-bad";
+                break;
+            case SP_MessageBoxInformation:
+                name = "about";
+                break;
+            case SP_MessageBoxQuestion:
+                name = "help";
+                break;
+            default:
+                break;
+        }
+        if (name && QIcon::themeName().startsWith(QStringLiteral("sol")) && QIcon::hasThemeIcon(QString::fromLatin1(name))) {
+            return QIcon::fromTheme(QString::fromLatin1(name));
+        }
+        return HintOverrideProxyStyle::standardIcon(pixmap, option, widget);
+    }
+};
+}  // namespace
+
+QStyle* SolTheme::createStyle()
+{
+    return new SolStyle(QStyleFactory::create(qtTheme()));
 }
 
 LogColors SolTheme::logColorScheme()

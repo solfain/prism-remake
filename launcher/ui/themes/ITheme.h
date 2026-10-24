@@ -63,6 +63,8 @@ class ITheme {
     virtual double fadeAmount() = 0;
     virtual LogColors logColorScheme() { return defaultLogColors(colorScheme()); }
     virtual QStringList searchPaths() { return {}; }
+    // The application style apply() installs. A theme can return a variant of the usual proxy style (the caller takes ownership).
+    virtual QStyle* createStyle();
 
     static QPalette fadeInactive(QPalette in, qreal bias, QColor color);
     static LogColors defaultLogColors(const QPalette& palette);
