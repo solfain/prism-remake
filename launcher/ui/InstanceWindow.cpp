@@ -90,6 +90,7 @@ InstanceWindow::InstanceWindow(MinecraftInstance* instance, QWidget* parent) : Q
         m_launchButton->setText(tr("&Launch"));
         m_launchButton->setToolTip(tr("Launch the instance"));
         m_launchButton->setPopupMode(QToolButton::MenuButtonPopup);
+        m_launchButton->setProperty("solRole", "primary");  // the main action of the window: filled, like the Launch button of the main window
         m_launchButton->setMinimumWidth(80);  // HACK!!
         horizontalLayout->addWidget(m_launchButton);
         connect(m_launchButton, &QPushButton::clicked, this, [this] { APPLICATION->launch(m_instance); });

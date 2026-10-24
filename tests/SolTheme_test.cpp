@@ -26,6 +26,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "ui/themes/ITheme.h"
 #include "ui/themes/IconTheme.h"
 #include "ui/themes/SolTheme.h"
 
@@ -248,6 +249,23 @@ class SolThemeTest : public QObject {
             const double ratio = contrast(strokeOf(icon), token(variant, "surface"));
             QVERIFY2(ratio >= 3.0, qPrintable(QString("icon %1 (%2): %3:1 on surface").arg(icon, variant).arg(ratio, 0, 'f', 2)));
         }
+    }
+
+    void fatalLogLinesStayReadable_data() { addVariants(); }
+    void fatalLogLinesStayReadable()
+    {
+        QFETCH(QString, variant);
+        const bool dark = variant == "dark";
+        SolTheme theme(dark ? SolTheme::Variant::Dark : SolTheme::Variant::Light);
+        const LogColors colors = theme.logColorScheme();
+
+        const QColor foreground = colors.foreground.value(MessageLevel::Fatal);
+        const QColor background = colors.background.value(MessageLevel::Fatal);
+        QVERIFY(foreground.isValid() && background.isValid());
+        const double ratio = contrast(foreground, background);
+        QVERIFY2(ratio >= 4.5, qPrintable(QString("fatal log line (%1): %2:1").arg(variant).arg(ratio, 0, 'f', 2)));
+        // a tint of the page, not a black bar: it stays on the same side of the lightness scale as the surface
+        QCOMPARE(background.lightness() < 128, dark);
     }
 
     void themeIdentity()

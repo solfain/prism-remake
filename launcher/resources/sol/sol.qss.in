@@ -32,6 +32,17 @@ QMenu::item {
     border-radius: 6px;
     margin: 1px 0px;
 }
+QMenu::indicator {
+    width: 16px;
+    height: 16px;
+    left: 8px;
+}
+QMenu::indicator:non-exclusive:checked {
+    image: url(:/sol/@variant@/menu-check.svg);
+}
+QMenu::indicator:exclusive:checked {
+    image: url(:/sol/@variant@/radio-dot.svg);
+}
 QMenu::item:selected {
     background-color: @accentSoft@;
     color: @ink@;
@@ -47,6 +58,12 @@ QMenu::separator {
 }
 QMenu::icon {
     padding-left: 6px;
+}
+/* an entry with an icon (an account, a theme ...) shows that it is the checked one by a ring around the icon */
+QMenu::icon:checked {
+    background-color: @accentSoftStrong@;
+    border: 1px solid @accent@;
+    border-radius: 4px;
 }
 QMenuBar {
     background-color: @bg@;
@@ -152,6 +169,12 @@ QToolButton::menu-indicator {
     right: 6px;
     width: 12px;
     height: 12px;
+}
+
+/* A command link carries a stock green arrow that Qt re-applies on every style change, which is not a colour of this palette.
+   An icon set from the style sheet is the one Qt leaves alone. */
+QCommandLinkButton {
+    qproperty-icon: url(:/sol/@variant@/command-link.svg);
 }
 
 /* ------------------------------------------------------------------ inputs */
@@ -268,33 +291,45 @@ QAbstractSpinBox::down-arrow:off {
 }
 
 /* ------------------------------------------------------- check boxes, radios */
+/* Check marks in group box titles ("override the global setting") and in item views are drawn from the same rules as a check
+   box. A styled QGroupBox / QMenu / item view draws NOTHING for a ::indicator it has no rule for, so each needs its own. */
 QCheckBox,
 QRadioButton {
     spacing: 8px;
 }
 QCheckBox::indicator,
+QGroupBox::indicator,
+QAbstractItemView::indicator,
 QRadioButton::indicator {
     width: 16px;
     height: 16px;
     background-color: @surface@;
     border: 1px solid @controlBorder@;
 }
-QCheckBox::indicator {
+QCheckBox::indicator,
+QGroupBox::indicator,
+QAbstractItemView::indicator {
     border-radius: 4px;
 }
 QRadioButton::indicator {
     border-radius: 9px;
 }
 QCheckBox::indicator:hover,
+QGroupBox::indicator:hover,
+QAbstractItemView::indicator:hover,
 QRadioButton::indicator:hover {
     border-color: @inkMuted@;
 }
-QCheckBox::indicator:checked {
+QCheckBox::indicator:checked,
+QGroupBox::indicator:checked,
+QAbstractItemView::indicator:checked {
     background-color: @accent@;
     border-color: @accent@;
     image: url(:/sol/@variant@/check.svg);
 }
-QCheckBox::indicator:indeterminate {
+QCheckBox::indicator:indeterminate,
+QGroupBox::indicator:indeterminate,
+QAbstractItemView::indicator:indeterminate {
     background-color: @accent@;
     border-color: @accent@;
     image: url(:/sol/@variant@/indeterminate.svg);
@@ -304,12 +339,18 @@ QRadioButton::indicator:checked {
     image: url(:/sol/@variant@/radio-dot.svg);
 }
 QCheckBox::indicator:disabled,
+QGroupBox::indicator:disabled,
+QAbstractItemView::indicator:disabled,
 QRadioButton::indicator:disabled {
     background-color: @bg@;
     border-color: @border@;
 }
 QCheckBox::indicator:checked:disabled,
-QCheckBox::indicator:indeterminate:disabled {
+QCheckBox::indicator:indeterminate:disabled,
+QGroupBox::indicator:checked:disabled,
+QGroupBox::indicator:indeterminate:disabled,
+QAbstractItemView::indicator:checked:disabled,
+QAbstractItemView::indicator:indeterminate:disabled {
     background-color: @accentTrack@;
     border-color: @accentTrack@;
     image: url(:/sol/@variant@/check-disabled.svg);
@@ -407,6 +448,9 @@ QGroupBox::title {
     padding: 0px 6px;
     color: @inkMuted@;
     font-weight: 600;
+}
+QGroupBox::indicator {
+    margin-left: 4px;
 }
 
 /* --------------------------------------------------------------- scrollbars */
@@ -530,6 +574,12 @@ QStatusBar {
 }
 QStatusBar::item {
     border: none;
+}
+/* the labels MainWindow puts into the status bar do not inherit the bar's colour, so they get their own rule */
+QStatusBar QLabel {
+    color: @inkMuted@;
+    font-size: 12px;
+    padding: 0px 10px;
 }
 QDialog,
 QMessageBox {
@@ -724,6 +774,48 @@ EditableLabel QTextEdit:disabled {
     background-color: transparent;
     border-color: transparent;
     color: @inkFaint@;
+}
+
+/* a drop-down button that is the main action of a dialog (the instance window's Launch) */
+QToolButton[solRole="primary"] {
+    background-color: @accent@;
+    color: @onAccent@;
+    border: 1px solid @accent@;
+    border-radius: 6px;
+    padding: 3px 12px;
+    min-height: 20px;
+    font-weight: 600;
+}
+QToolButton[solRole="primary"]:hover {
+    background-color: @accentHover@;
+    border-color: @accentHover@;
+}
+QToolButton[solRole="primary"]:pressed {
+    background-color: @accentPress@;
+    border-color: @accentPress@;
+}
+QToolButton[solRole="primary"]:disabled {
+    background-color: @surfaceAlt@;
+    border-color: @border@;
+    color: @inkFaint@;
+}
+QToolButton[solRole="primary"]::menu-button {
+    border: none;
+    border-left: 1px solid @accentHover@;
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+    width: 20px;
+}
+
+/* A scroll area that only scrolls a page of controls (Settings pages, the Java tabs ...) needs no frame of its own: the page, the
+   tab pane or the window around it already is one. Without this a tab pane showed a box inside a box. */
+QScrollArea {
+    border: none;
+    background: transparent;
+}
+QScrollArea > QWidget,
+QScrollArea > QWidget > QWidget {
+    background: transparent;
 }
 
 /* ------------------------------------------------ dialog building blocks (solRole) */

@@ -154,13 +154,19 @@ LogColors SolTheme::logColorScheme()
     }
 
     LogColors result;
-    // fatal errors keep the classic "white on black bar" treatment, tinted to match the theme
-    result.background[MessageLevel::Fatal] = QColor(0x18, 0x16, 0x1C);
+    // Fatal errors stand out as a soft bar: danger-coloured text on a faint wash of the same colour. (The classic black bar
+    // is a hole in a light console.) The washes are the strongest that still keep 4.5:1, which SolThemeTest checks.
+    const QColor surface = token("surface");
+    const QColor danger = token("danger");
+    const double wash = m_variant == Variant::Dark ? 0.14 : 0.10;
+    result.background[MessageLevel::Fatal] = QColor::fromRgbF(surface.redF() * (1 - wash) + danger.redF() * wash,
+                                                              surface.greenF() * (1 - wash) + danger.greenF() * wash,
+                                                              surface.blueF() * (1 - wash) + danger.blueF() * wash);
     result.foreground[MessageLevel::Launcher] = token("accent");
     result.foreground[MessageLevel::Debug] = token("success");
     result.foreground[MessageLevel::Warning] = token("warning");
-    result.foreground[MessageLevel::Error] = token("danger");
-    result.foreground[MessageLevel::Fatal] = QColor(0xE6, 0x84, 0x85);
+    result.foreground[MessageLevel::Error] = danger;
+    result.foreground[MessageLevel::Fatal] = danger;
     return result;
 }
 
