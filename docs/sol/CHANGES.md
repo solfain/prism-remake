@@ -2,7 +2,7 @@
 
 The first commit on this branch (`3012098`, *Import Prism Launcher develop as the SOL Launcher baseline*) is an
 unmodified snapshot of Prism Launcher `develop`. Everything after it is SOL Launcher. This page is generated from git;
-for the full diff run `git diff 3012098..HEAD`. Net result: 260 files changed, 6030 insertions(+), 2241 deletions(-).
+for the full diff run `git diff 3012098..HEAD`. Net result: 264 files changed, 6239 insertions(+), 2237 deletions(-).
 
 ## Commits
 
@@ -24,26 +24,41 @@ for the full diff run `git diff 3012098..HEAD`. Net result: 260 files changed, 6
 | 14 | Message boxes use the SOL line icons | Message box icons come from the SOL icon set |
 | 15 | Let a build choose its version channel; CI builds say "preview" | `Launcher_VERSION_CHANNEL`; CI builds read `1.0.0-preview` |
 | 16 | CI: keep the Windows build from running out of disk |  |
-| 17 | Credit Lucide in the app, document the new look, retake the screenshots |  |
+| 17 | Credit Lucide in the app, document the new look, retake the screenshots | Lucide credited in About > Credits; docs and screenshots refreshed; CHANGES organised by area |
+| 18 | About dialog: Close is the default button, not "About Qt" | Close, not "About Qt", is the default button |
+| 19 | CI: find out why the Windows build dies, and give it less to chew on at once | PowerShell build wrapper that shows the real exit status and the failing command |
+| 20 | README: describe the new logo |  |
+| 21 | Window frames follow the SOL theme instead of the system setting | Title bars follow the SOL theme (Windows, macOS, desktop Linux) instead of the system setting |
+| 22 | MSVC: whole-program optimization only when ENABLE_LTO asks for it | (reverted in a later commit: the diagnosis was wrong) |
+| 23 | Docs: ENABLE_LTO and the other small deviations from upstream's build | Docs for the deviations from upstream's build |
+| 24 | Fix the Windows link error (MsaSetup_test's main) and revert the LTO change that misdiagnosed it | The real cause of the failing Windows build: an MSVC-only link error in the MsaSetup test; the wrong LTO change reverted |
+| 25 | Add two test data files that .gitignore kept out of the baseline import | Two upstream test files that .gitignore had kept out of the baseline import |
+| 26 | CI: undo the disk-space workarounds (the junction broke upstream's FileSystem test) | Removed the disk-space workarounds (the build-dir junction broke upstream's FileSystem test) |
+| 27 | CI: smoke-test the packaged Windows build (files, start-up, silent install) | Smoke test of the packaged Windows build: files, start-up, silent install of the installer |
+| 28 | README and BUILDING: the preview download, and how the CI works | Download links for the preview release, and how the CI works |
 
 ## Files changed, by area
 
 Net change of each file against the baseline (a file touched by several commits appears once).
 
-### Continuous integration (2)
+### Continuous integration (4)
 
 | Change | File | |
 | --- | --- | --- |
+| added | `.github/scripts/build-windows.ps1` | |
 | added | `.github/scripts/ci-run.sh` | |
+| added | `.github/scripts/smoke-test-windows.ps1` | |
 | added | `.github/workflows/build.yml` | |
 
-### Tests (3)
+### Tests (5)
 
 | Change | File | |
 | --- | --- | --- |
 | modified | `tests/CMakeLists.txt` | |
 | added | `tests/MsaSetup_test.cpp` | |
 | added | `tests/SolTheme_test.cpp` | |
+| added | `tests/testdata/DataPackParse/another_test_folder/data/dummy/tags/item/foo_proof/bar.json` | |
+| added | `tests/testdata/DataPackParse/test_folder/data/dummy/tags/item/foo_proof/bar.json` | |
 
 ### Documentation (12)
 
@@ -219,16 +234,19 @@ headless through Qt's VNC platform plugin; plus GitHub Actions (see below).
   library, hover / selection / group collapse / context menu, the Folders, Help and Accounts menus, Settings, the About
   dialog, the New Instance dialog, the instance editor, the Microsoft setup dialog, message boxes. The card animation was
   checked by logging its progress (a clean ramp, a cross-fade between cards).
-- **GitHub Actions** builds with GCC on Linux and with MSVC on Windows and runs the tests on both (see the workflow runs for
-  the current state; the first run compiled and passed on both compilers).
+- **GitHub Actions** builds with GCC on Linux and with MSVC on Windows; **all 25 test suites pass on both**. CI found and fixed a
+  real MSVC-only link error in a test I had written (`char** argv` against the driver's `char* argv[]`).
+- **The packaged Windows build was smoke-tested on a real Windows runner**: all required files are in the package (Qt SVG, the
+  windows platform plugin, TLS, both helper jars), `sollauncher.exe --version` works, the program starts and keeps running, and
+  the NSIS installer installs silently with exit code 0 and the installed copy starts the same way.
 
 **Not tested** (no way to do it in the sandbox, or out of scope without your keys):
 
 - the **OAuth sign-in itself** (needs your own application ID and Mojang's approval), CurseForge, and the Modrinth / FTB /
   ATLauncher / Technic network flows (the sandbox has no access to those hosts);
 - actually launching Minecraft, Java download and detection on a real system;
-- running the installer on Windows: the build produces it, but nobody has clicked through it yet. High-DPI scaling and
-  Segoe UI rendering on Windows (screenshots use Open Sans);
+- how the interface looks on Windows (Segoe UI, high-DPI scaling, dark title bars: screenshots use Open Sans on Linux), and
+  clicking through the installer's wizard by hand (only the silent install was run);
 - macOS (including the new icon bundle); the Linux desktop integration files (`.desktop`, AppStream, man page) beyond their
   build step;
 - the self-updater, and behaviour against the Prism-hosted metadata and help services.

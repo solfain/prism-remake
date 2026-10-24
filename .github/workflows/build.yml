@@ -14,7 +14,10 @@ name: Build
 
 on:
   push:
+    # a change to the docs alone does not need a 15-minute build and a new preview release
+    paths-ignore: ['docs/**', '**.md']
   pull_request:
+    paths-ignore: ['docs/**', '**.md']
   workflow_dispatch:
 
 concurrency:
