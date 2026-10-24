@@ -1,0 +1,12 @@
+[Icon Theme]
+Name=SOL Line (light strokes)
+Comment=Internal: the light-stroke half of the SOL Line icon theme, chosen automatically on dark themes
+Inherits=flat_white
+Directories=scalable
+Hidden=true
+
+[scalable]
+Size=48
+Type=Scalable
+MinSize=16
+MaxSize=256

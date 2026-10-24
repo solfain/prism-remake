@@ -92,5 +92,11 @@ class ThemeManager {
 #endif
 
     static inline const QStringList s_builtinIcons{"pe_colored",  "pe_light", "pe_dark",    "pe_blue", "breeze_light",
-                                                   "breeze_dark", "flat",     "flat_white", "multimc"};
+                                                   "breeze_dark", "flat",     "flat_white", "multimc", "sol",
+                                                   "sol_white"};
+
+    // The SOL line icons exist as dark strokes ("sol") and light strokes ("sol_white"). Choosing "sol" means "whichever
+    // reads on the active palette", so the icons can never end up invisible after a switch between light and dark themes.
+    static QString resolveIconTheme(const QString& name);
+    QString m_requestedIconTheme;
 };

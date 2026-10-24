@@ -1212,6 +1212,7 @@ qt_add_resources(LAUNCHER_RESOURCES
     resources/documents/documents.qrc
     resources/shaders/shaders.qrc
     resources/sol/sol.qrc
+    resources/sol_icons/sol_icons.qrc
     "${CMAKE_CURRENT_BINARY_DIR}/../${Launcher_Branding_LogoQRC}"
 )
 

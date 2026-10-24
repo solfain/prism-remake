@@ -31,6 +31,7 @@ bool IconTheme::load()
     QSettings settings(path, QSettings::IniFormat);
     settings.beginGroup("Icon Theme");
     m_name = settings.value("Name").toString();
+    m_hidden = settings.value("Hidden", false).toBool();
     settings.endGroup();
     return !m_name.isNull();
 }

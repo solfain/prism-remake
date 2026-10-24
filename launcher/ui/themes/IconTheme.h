@@ -29,9 +29,12 @@ class IconTheme {
     QString id() const { return m_id; }
     QString path() const { return m_path; }
     QString name() const { return m_name; }
+    // `Hidden=true` in index.theme: usable, but not offered in the theme lists
+    bool hidden() const { return m_hidden; }
 
    private:
     QString m_id;
     QString m_path;
     QString m_name;
+    bool m_hidden = false;
 };

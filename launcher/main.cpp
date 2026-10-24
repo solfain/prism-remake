@@ -58,6 +58,7 @@ int main(int argc, char* argv[])
             Q_INIT_RESOURCE(documents);
             Q_INIT_RESOURCE(sollauncher);
             Q_INIT_RESOURCE(sol);
+            Q_INIT_RESOURCE(sol_icons);
 
             Q_INIT_RESOURCE(pe_dark);
             Q_INIT_RESOURCE(pe_light);

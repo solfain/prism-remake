@@ -15,7 +15,9 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QRegularExpression>
@@ -24,6 +26,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "ui/themes/IconTheme.h"
 #include "ui/themes/SolTheme.h"
 
 namespace {
@@ -83,7 +86,12 @@ class SolThemeTest : public QObject {
     }
 
    private slots:
-    void initTestCase() { Q_INIT_RESOURCE(sol); }
+    void initTestCase()
+    {
+        Q_INIT_RESOURCE(sol);
+        Q_INIT_RESOURCE(sol_icons);
+        Q_INIT_RESOURCE(flat);
+    }
 
     void tokensAreComplete_data() { addVariants(); }
     void tokensAreComplete()
@@ -182,6 +190,63 @@ class SolThemeTest : public QObject {
         for (const char* key : { "bg", "surface", "sidebar" }) {
             const double chroma = oklchChroma(token(variant, key));
             QVERIFY2(chroma <= 0.02, qPrintable(QString("%1 too tinted in %2 (C = %3)").arg(key, variant).arg(chroma, 0, 'f', 3)));
+        }
+    }
+
+    void iconThemesCoverTheFlatSet()
+    {
+        // Every icon of the "flat" theme needs a line-icon counterpart in both variants; the brand glyphs are the only
+        // exceptions (they fall back to the flat theme, which the sol themes inherit from).
+        const QStringList brandGlyphs = { "discord.svg", "reddit-alien.svg" };
+        const QStringList flatIcons = QDir(":/icons/flat/scalable").entryList({ "*.svg" });
+        QVERIFY(flatIcons.size() > 40);
+        for (const QString& file : flatIcons) {
+            if (brandGlyphs.contains(file)) {
+                continue;
+            }
+            for (const QString& theme : { QString("sol"), QString("sol_white") }) {
+                QVERIFY2(QFile::exists(QString(":/icons/%1/scalable/%2").arg(theme, file)), qPrintable(QString("%1 is missing in %2").arg(file, theme)));
+            }
+        }
+    }
+
+    void iconThemeMetadata()
+    {
+        IconTheme visible("sol", ":/icons/sol");
+        QVERIFY(visible.load());
+        QVERIFY(!visible.hidden());
+        QCOMPARE(visible.name(), QString("SOL Line"));
+
+        // the light-stroke half is only ever chosen automatically, so it stays out of the theme lists
+        IconTheme internal("sol_white", ":/icons/sol_white");
+        QVERIFY(internal.load());
+        QVERIFY(internal.hidden());
+
+        // a theme without the key is listed as before
+        IconTheme flat("flat", ":/icons/flat");
+        QVERIFY(flat.load());
+        QVERIFY(!flat.hidden());
+    }
+
+    void iconStrokesComeFromTheTokens_data() { addVariants(); }
+    void iconStrokesComeFromTheTokens()
+    {
+        QFETCH(QString, variant);
+        const QString theme = variant == "dark" ? "sol_white" : "sol";
+        const auto strokeOf = [&](const QString& icon) {
+            QFile file(QString(":/icons/%1/scalable/%2.svg").arg(theme, icon));
+            [&] { QVERIFY2(file.open(QIODevice::ReadOnly), qPrintable(file.fileName())); }();
+            const auto match = QRegularExpression("stroke=\"(#[0-9A-Fa-f]{6})\"").match(QString::fromUtf8(file.readAll()));
+            return match.hasMatch() ? QColor(match.captured(1)) : QColor();
+        };
+        // ordinary icons are muted ink; status icons carry their semantic colour; both must stay readable on the surface
+        QCOMPARE(strokeOf("settings"), token(variant, "inkMuted"));
+        QCOMPARE(strokeOf("status-bad"), token(variant, "danger"));
+        QCOMPARE(strokeOf("status-good"), token(variant, "success"));
+        QCOMPARE(strokeOf("status-yellow"), token(variant, "warning"));
+        for (const QString& icon : { "settings", "new", "delete", "status-bad", "status-good", "status-yellow" }) {
+            const double ratio = contrast(strokeOf(icon), token(variant, "surface"));
+            QVERIFY2(ratio >= 3.0, qPrintable(QString("icon %1 (%2): %3:1 on surface").arg(icon, variant).arg(ratio, 0, 'f', 2)));
         }
     }
 

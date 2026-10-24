@@ -1274,9 +1274,8 @@ bool Application::createSetupWizard()
         // set default theme after going into theme wizard
         // SOL Launcher ships its own look on every platform: the system colour scheme only decides light vs. dark.
         if (!validIcons) {
-            const QString defaultIconTheme = darkMode ? QStringLiteral("flat_white") : QStringLiteral("flat");
-
-            settings()->set("IconTheme", defaultIconTheme);
+            // "sol" is the adaptive line-icon set: it picks its light or dark strokes from the active theme by itself
+            settings()->set("IconTheme", QStringLiteral("sol"));
         }
         if (!validWidgets) {
             const QString style = SolTheme::idFor(darkMode ? SolTheme::Variant::Dark : SolTheme::Variant::Light);

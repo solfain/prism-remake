@@ -1,0 +1,11 @@
+[Icon Theme]
+Name=SOL Line
+Comment=Thin line icons (Lucide) that follow the active theme: dark strokes on light themes, light strokes on dark ones
+Inherits=flat
+Directories=scalable
+
+[scalable]
+Size=48
+Type=Scalable
+MinSize=16
+MaxSize=256

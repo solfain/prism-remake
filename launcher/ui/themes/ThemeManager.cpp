@@ -206,6 +206,9 @@ QList<IconTheme*> ThemeManager::getValidIconThemes()
     QList<IconTheme*> ret;
     ret.reserve(static_cast<qsizetype>(m_icons.size()));
     for (auto&& [id, theme] : m_icons) {
+        if (theme.hidden()) {
+            continue;
+        }
         ret.append(&theme);
     }
     return ret;
@@ -258,6 +261,15 @@ QDir ThemeManager::getCatPacksFolder()
     return m_catPacksFolder;
 }
 
+QString ThemeManager::resolveIconTheme(const QString& name)
+{
+    if (name == QStringLiteral("sol") || name == QStringLiteral("sol_white")) {
+        const bool darkPalette = qApp->palette().color(QPalette::Window).lightness() < 128;
+        return darkPalette ? QStringLiteral("sol_white") : QStringLiteral("sol");
+    }
+    return name;
+}
+
 void ThemeManager::setIconTheme(const QString& name)
 {
     if (!m_icons.contains(name)) {
@@ -265,7 +277,8 @@ void ThemeManager::setIconTheme(const QString& name)
         return;
     }
 
-    QIcon::setThemeName(name);
+    m_requestedIconTheme = name;
+    QIcon::setThemeName(resolveIconTheme(name));
 }
 
 void ThemeManager::setApplicationTheme(const QString& name, bool initial)
@@ -277,6 +290,11 @@ void ThemeManager::setApplicationTheme(const QString& name, bool initial)
         themeDebugLog() << "applying theme" << theme->name();
         theme->apply(initial);
         setTitlebarColorOfAllWindowsOnMac(qApp->palette().window().color());
+
+        // an adaptive icon theme depends on the palette that was just applied
+        if (!m_requestedIconTheme.isEmpty()) {
+            QIcon::setThemeName(resolveIconTheme(m_requestedIconTheme));
+        }
 
         m_logColors = theme->logColorScheme();
     } else {
