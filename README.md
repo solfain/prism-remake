@@ -40,10 +40,23 @@ Linux build that only had Open Sans installed, so on Windows the same screens re
 Everything else is unchanged: launching Minecraft, Microsoft account sign-in, instance management, modpack support
 (CurseForge, Modrinth, FTB, ATLauncher, Technic, import/export), Java configuration and all settings.
 
+## Download
+
+**Windows (preview).** CI builds every push to this branch and replaces the rolling
+[**preview** release](https://github.com/solfain/prism-remake/releases/tag/preview) with the result:
+
+- [`SOLLauncher-Setup.exe`](https://github.com/solfain/prism-remake/releases/download/preview/SOLLauncher-Setup.exe): installs for
+  the current user, no administrator rights needed.
+- [`SOLLauncher-Windows-Portable.zip`](https://github.com/solfain/prism-remake/releases/download/preview/SOLLauncher-Windows-Portable.zip):
+  runs from any folder and keeps its data next to the program.
+
+The files are **not code-signed**, so Windows SmartScreen may warn you: choose *More info*, then *Run anyway*. Signing in with a
+Microsoft account needs an application ID of your own, see [Microsoft sign-in](docs/sol/MICROSOFT_SIGN_IN.md). There are no builds
+for macOS or Linux yet (the Linux build is compiled and tested in CI, but not packaged).
+
 ## Building
 
-SOL Launcher is a C++23 / Qt 6.8+ application built with CMake. There are no binary releases yet, so you build it
-yourself:
+SOL Launcher is a C++23 / Qt 6.8+ application built with CMake. To build it yourself:
 
 ```
 git clone --recurse-submodules https://github.com/solfain/prism-remake.git

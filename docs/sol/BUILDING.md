@@ -103,6 +103,26 @@ All of these are CMake cache variables (`-DName=value`); the defaults live in th
 The Microsoft client ID and the CurseForge key can also be entered at run time in **Settings > APIs**, which overrides
 the build-time value. See [FORK_NOTES.md](FORK_NOTES.md) for why the keys are empty by default.
 
+## Continuous integration and the preview release
+
+`.github/workflows/build.yml` (adapted from upstream's `build.yml`) runs on every push, pull request and on demand:
+
+| Job | What it does |
+| --- | --- |
+| Windows (MSVC, x64) | Qt 6.11, JDK 17, vcpkg; `windows_msvc` preset in Release; runs the tests; creates the install tree, a portable zip and the NSIS installer; smoke-tests the package (files present, `--version`, starts and stays up, silent install); uploads the files as artifacts; for pushes to the default branch or an `arena/*` branch it replaces the **preview** pre-release |
+| Linux (GCC, build and tests) | Debug build with GCC 13 on Ubuntu 24.04 and the tests; this is what catches compiler-specific problems |
+
+Repository settings it reads (both optional, empty is a valid configuration): the **variable** `SOL_MSA_CLIENT_ID` (your Microsoft
+application ID, see [MICROSOFT_SIGN_IN.md](MICROSOFT_SIGN_IN.md)) and the **secret** `SOL_CURSEFORGE_API_KEY`. Change a variable,
+then use *Actions > Build > Re-run all jobs* to publish a new preview with it.
+
+The builds are unsigned and do not enable the self-updater (`Launcher_BUILD_ARTIFACT` is not set); the version reads
+`1.0.0-preview` (`Launcher_VERSION_CHANNEL`).
+
+The raw job logs are not always reachable from the tools used to develop this, so the steps report failures themselves:
+`.github/scripts/ci-run.sh` and `build-windows.ps1` repeat the failing command and its output as an error annotation (visible on
+the run page and through the API), and the smoke test writes its findings as one annotation.
+
 ## Running without installing
 
 After building, the executable is written to the top of the build folder: `build/sollauncher` with a single-config
