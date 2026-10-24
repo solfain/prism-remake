@@ -36,9 +36,14 @@
 #pragma once
 
 #include <QCache>
+#include <QElapsedTimer>
+#include <QHash>
 #include <QLineEdit>
 #include <QListView>
+#include <QPersistentModelIndex>
 #include <QScrollBar>
+#include <QTimer>
+#include <QVariantAnimation>
 #include <functional>
 #include "VisualGroup.h"
 #include "ui/themes/CatPainter.h"
@@ -55,6 +60,13 @@ class InstanceView : public QAbstractItemView {
     ~InstanceView();
 
     void setModel(QAbstractItemModel* model) override;
+
+    /*!
+     * How hovered / selected an item is right now, from 0 to 1 and already eased. Both ease towards their target state over
+     * a fraction of a second, so the delegate can blend colours instead of switching them (cards fade in and out).
+     */
+    qreal hoverProgress(const QModelIndex& index) const;
+    qreal selectionProgress(const QModelIndex& index) const;
 
     using visibilityFunction = std::function<bool(const QString&)>;
     void setSourceOfGroupCollapseStatus(visibilityFunction f) { m_fVisibility = f; }
@@ -104,6 +116,8 @@ class InstanceView : public QAbstractItemView {
     void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
     bool viewportEvent(QEvent* event) override;
+    void wheelEvent(QWheelEvent* event) override;
+    void selectionChanged(const QItemSelection& selected, const QItemSelection& deselected) override;
 
     void dragEnterEvent(QDragEnterEvent* event) override;
     void dragMoveEvent(QDragMoveEvent* event) override;
@@ -135,6 +149,21 @@ class InstanceView : public QAbstractItemView {
     // item under the mouse pointer, painted with a hover outline
     QPersistentModelIndex m_hoverIndex;
     void setHoverIndex(const QModelIndex& index);
+
+    // Hover / selection emphasis of the items that are in transition (an item at rest has no entry: its state is read directly).
+    struct Emphasis {
+        qreal hover = 0.0;
+        qreal selected = 0.0;
+    };
+    QHash<QPersistentModelIndex, Emphasis> m_emphasis;
+    QTimer m_emphasisTimer;
+    QElapsedTimer m_emphasisClock;
+    void beginEmphasis(const QModelIndex& index, bool wasHovered, bool wasSelected);
+    void stepEmphasis();
+
+    // smooth scrolling for a classic mouse wheel (touchpads already scroll smoothly)
+    QVariantAnimation* m_scrollAnimation = nullptr;
+    int m_scrollTarget = 0;
 
     // point where the currently active mouse action started in geometry coordinates
     QPoint m_pressedPosition;

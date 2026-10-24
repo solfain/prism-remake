@@ -47,6 +47,8 @@
 #include <QPersistentModelIndex>
 #include <QScrollBar>
 #include <QtMath>
+#include <QWheelEvent>
+#include <cmath>
 
 #include "VisualGroup.h"
 #include "ui/themes/CatPainter.h"
@@ -54,6 +56,21 @@
 
 #include <Application.h>
 #include <InstanceList.h>
+
+namespace {
+constexpr int EmphasisDurationMs = 140;  // hover / selection fade
+constexpr int ScrollDurationMs = 180;    // one mouse wheel notch
+
+qreal easeOut(qreal t)
+{
+    return 1.0 - std::pow(1.0 - t, 3.0);
+}
+
+qreal approach(qreal current, qreal target, qreal step)
+{
+    return current < target ? qMin(target, current + step) : qMax(target, current - step);
+}
+}  // namespace
 
 InstanceView::InstanceView(QWidget* parent) : QAbstractItemView(parent)
 {
@@ -66,6 +83,17 @@ InstanceView::InstanceView(QWidget* parent) : QAbstractItemView(parent)
     setPaintCat(APPLICATION->settings()->get("TheCat").toBool());
     connect(verticalScrollBar(), &QScrollBar::valueChanged, viewport(), QOverload<>::of(&QWidget::update));
     connect(horizontalScrollBar(), &QScrollBar::valueChanged, viewport(), QOverload<>::of(&QWidget::update));
+
+    m_emphasisTimer.setInterval(16);
+    m_emphasisTimer.setTimerType(Qt::PreciseTimer);
+    connect(&m_emphasisTimer, &QTimer::timeout, this, &InstanceView::stepEmphasis);
+
+    m_scrollAnimation = new QVariantAnimation(this);
+    m_scrollAnimation->setDuration(ScrollDurationMs);
+    m_scrollAnimation->setEasingCurve(QEasingCurve::OutCubic);
+    connect(m_scrollAnimation, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) { verticalScrollBar()->setValue(value.toInt()); });
+    // grabbing the scroll bar takes over from a running animation
+    connect(verticalScrollBar(), &QScrollBar::sliderPressed, m_scrollAnimation, &QVariantAnimation::stop);
 }
 
 InstanceView::~InstanceView()
@@ -428,6 +456,7 @@ void InstanceView::mouseDoubleClickEvent(QMouseEvent* event)
 
     QStyleOptionViewItem option;
     initViewItemOption(&option);
+    option.widget = this;  // the delegate reads the hover / selection progress from the view
     if ((model()->flags(index) & Qt::ItemIsEnabled) && !style()->styleHint(QStyle::SH_ItemView_ActivateItemOnSingleClick, &option, this)) {
         emit activated(index);
     }
@@ -438,8 +467,11 @@ void InstanceView::setHoverIndex(const QModelIndex& index)
     if (m_hoverIndex == index) {
         return;
     }
-    // repaint the item that lost the hover outline and the one that got it
+    // the item that lost the hover outline fades out, the one that got it fades in
     const QModelIndex previous = m_hoverIndex;
+    const auto isSelected = [this](const QModelIndex& item) { return item.isValid() && selectionModel() && selectionModel()->isSelected(item); };
+    beginEmphasis(previous, true, isSelected(previous));
+    beginEmphasis(index, false, isSelected(index));
     m_hoverIndex = index;
     if (previous.isValid()) {
         viewport()->update(visualRect(previous));
@@ -447,6 +479,100 @@ void InstanceView::setHoverIndex(const QModelIndex& index)
     if (index.isValid()) {
         viewport()->update(visualRect(index));
     }
+}
+
+qreal InstanceView::hoverProgress(const QModelIndex& index) const
+{
+    const auto it = m_emphasis.constFind(QPersistentModelIndex(index));
+    if (it != m_emphasis.constEnd()) {
+        return easeOut(it->hover);
+    }
+    return m_hoverIndex == index ? 1.0 : 0.0;
+}
+
+qreal InstanceView::selectionProgress(const QModelIndex& index) const
+{
+    const auto it = m_emphasis.constFind(QPersistentModelIndex(index));
+    if (it != m_emphasis.constEnd()) {
+        return easeOut(it->selected);
+    }
+    return selectionModel() && selectionModel()->isSelected(index) ? 1.0 : 0.0;
+}
+
+void InstanceView::beginEmphasis(const QModelIndex& index, bool wasHovered, bool wasSelected)
+{
+    if (!index.isValid()) {
+        return;
+    }
+    const QPersistentModelIndex key(index);
+    if (!m_emphasis.contains(key)) {
+        // a new transition starts from the state the item was resting in; one already under way carries on from where it is
+        m_emphasis.insert(key, Emphasis{ wasHovered ? 1.0 : 0.0, wasSelected ? 1.0 : 0.0 });
+    }
+    if (!m_emphasisTimer.isActive()) {
+        m_emphasisClock.start();
+        m_emphasisTimer.start();
+    }
+}
+
+void InstanceView::stepEmphasis()
+{
+    const qreal step = static_cast<qreal>(m_emphasisClock.restart()) / EmphasisDurationMs;
+    for (auto it = m_emphasis.begin(); it != m_emphasis.end();) {
+        const QModelIndex index = it.key();
+        if (!index.isValid()) {
+            it = m_emphasis.erase(it);
+            continue;
+        }
+        const qreal hoverTarget = m_hoverIndex == index ? 1.0 : 0.0;
+        const qreal selectedTarget = selectionModel() && selectionModel()->isSelected(index) ? 1.0 : 0.0;
+        it->hover = approach(it->hover, hoverTarget, step);
+        it->selected = approach(it->selected, selectedTarget, step);
+        viewport()->update(visualRect(index));
+        if (it->hover == hoverTarget && it->selected == selectedTarget) {
+            it = m_emphasis.erase(it);  // arrived: from here on the resting state is read directly
+        } else {
+            ++it;
+        }
+    }
+    if (m_emphasis.isEmpty()) {
+        m_emphasisTimer.stop();
+    }
+}
+
+void InstanceView::selectionChanged(const QItemSelection& selected, const QItemSelection& deselected)
+{
+    for (const QModelIndex& index : deselected.indexes()) {
+        beginEmphasis(index, m_hoverIndex == index, true);
+    }
+    for (const QModelIndex& index : selected.indexes()) {
+        beginEmphasis(index, m_hoverIndex == index, false);
+    }
+    QAbstractItemView::selectionChanged(selected, deselected);
+}
+
+void InstanceView::wheelEvent(QWheelEvent* event)
+{
+    // Touchpads (pixel deltas), modified wheels and horizontal scrolling keep Qt's behaviour; a classic wheel is smoothed.
+    if (!event->pixelDelta().isNull() || event->modifiers() != Qt::NoModifier || event->angleDelta().y() == 0) {
+        m_scrollAnimation->stop();
+        QAbstractItemView::wheelEvent(event);
+        return;
+    }
+
+    QScrollBar* bar = verticalScrollBar();
+    // the distance of one notch is Qt's own (wheel scroll lines times the single step, but never more than a page)
+    const int perNotch = qMin(bar->singleStep() * QApplication::wheelScrollLines(), bar->pageStep());
+    const int base = m_scrollAnimation->state() == QAbstractAnimation::Running ? m_scrollTarget : bar->value();
+    m_scrollTarget = qBound(bar->minimum(), base - qRound(event->angleDelta().y() / 120.0 * perNotch), bar->maximum());
+
+    m_scrollAnimation->stop();
+    if (m_scrollTarget != bar->value()) {
+        m_scrollAnimation->setStartValue(bar->value());
+        m_scrollAnimation->setEndValue(m_scrollTarget);
+        m_scrollAnimation->start();
+    }
+    event->accept();
 }
 
 bool InstanceView::viewportEvent(QEvent* event)
@@ -482,6 +608,7 @@ void InstanceView::paintEvent([[maybe_unused]] QPaintEvent* event)
 
     QStyleOptionViewItem option;
     initViewItemOption(&option);
+    option.widget = this;  // the delegate reads the hover / selection progress from the view
     option.widget = this;
 
     if (model()->rowCount() == 0) {
@@ -747,6 +874,7 @@ QRect InstanceView::geometryRect(const QModelIndex& index) const
 
     QStyleOptionViewItem option;
     initViewItemOption(&option);
+    option.widget = this;  // the delegate reads the hover / selection progress from the view
 
     QRect out;
     out.setTop(cat->verticalPosition() + cat->headerHeight() + 5 + cat->rowTopOf(index));
@@ -795,6 +923,7 @@ QPixmap InstanceView::renderToPixmap(const QModelIndexList& indices, QRect* r) c
     QPainter painter(&pixmap);
     QStyleOptionViewItem option;
     initViewItemOption(&option);
+    option.widget = this;  // the delegate reads the hover / selection progress from the view
     option.state |= QStyle::State_Selected;
     for (int j = 0; j < paintPairs.count(); ++j) {
         option.rect = paintPairs.at(j).first.translated(-r->topLeft());
@@ -1010,6 +1139,7 @@ void InstanceView::scrollTo(const QModelIndex& index, ScrollHint hint)
 {
     if (!index.isValid())
         return;
+    m_scrollAnimation->stop();
 
     const QRect rect = visualRect(index);
     if (hint == EnsureVisible && viewport()->rect().contains(rect)) {

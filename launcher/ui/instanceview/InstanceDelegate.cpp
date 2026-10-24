@@ -46,6 +46,7 @@
 #include <QTextEdit>
 #include "BaseInstance.h"
 #include "InstanceList.h"
+#include "InstanceView.h"
 #include "rainbow.h"
 
 namespace {
@@ -118,20 +119,19 @@ void ListViewDelegate::paint(QPainter* painter, const QStyleOptionViewItem& opti
     painter->setClipRect(opt.rect);
     painter->setRenderHint(QPainter::Antialiasing, true);
 
+    // Hover and selection are not switched but eased by the view, so the card fades between its states. Without such a view
+    // (any other widget using this delegate) the plain state is used.
+    const auto* view = qobject_cast<const InstanceView*>(opt.widget);
+    const qreal hoverProgress = view ? view->hoverProgress(index) : (hovered ? 1.0 : 0.0);
+    const qreal selectProgress = view ? view->selectionProgress(index) : (selected ? 1.0 : 0.0);
+
     // The card: a flat surface with a hairline. Everything is derived from the palette, so it follows any theme.
     {
         const QColor surface = palette.color(QPalette::Base);
         const QColor accent = palette.color(QPalette::Highlight);
-        QColor fill = surface;
-        QColor outline = palette.color(QPalette::Mid);
-        qreal outlineWidth = 1.0;
-        if (selected) {
-            fill = Rainbow::mix(surface, accent, 0.14);
-            outline = accent;
-            outlineWidth = 1.5;
-        } else if (hovered) {
-            outline = palette.color(QPalette::Dark);
-        }
+        const QColor fill = Rainbow::mix(surface, accent, 0.14 * selectProgress);
+        const QColor outline = Rainbow::mix(Rainbow::mix(palette.color(QPalette::Mid), palette.color(QPalette::Dark), hoverProgress), accent, selectProgress);
+        const qreal outlineWidth = 1.0 + 0.5 * selectProgress;
         painter->setBrush(fill);
         painter->setPen(QPen(outline, outlineWidth));
         painter->drawRoundedRect(QRectF(opt.rect).adjusted(0.5, 0.5, -0.5, -0.5), CardCornerRadius, CardCornerRadius);
