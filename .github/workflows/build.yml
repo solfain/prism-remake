@@ -131,8 +131,9 @@ jobs:
           key: vcpkg-windows-${{ env.VCPKG_SUBMODULE_SHA }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
 
       - name: Build
-        shell: bash
-        run: bash .github/scripts/ci-run.sh "Build" cmake --build --preset windows_msvc --config "$BUILD_TYPE"
+        shell: pwsh
+        # three parallel compiles instead of ninja's default (cores + 2): Qt-heavy translation units need a lot of memory
+        run: .github/scripts/build-windows.ps1 -Preset windows_msvc -Config $env:BUILD_TYPE -Parallel 3
 
       - name: Disk space after the build
         if: always()
