@@ -131,7 +131,11 @@ class MsaSetupTest : public QObject {
 
 // A widget test needs a platform plugin. Default to the offscreen one so the test also runs on machines without a display
 // (this main() is renamed to MsaSetup_test by tests/CMakeLists.txt, like the generated one of QTEST_MAIN would be).
-int main(int argc, char** argv)
+//
+// NOTE: the parameter must be spelled `char* argv[]`, as in the declaration the generated test driver uses. MSVC mangles an array
+// parameter differently from a pointer one (`char* const*` against `char**`), so with `char** argv` the driver's call does not
+// link there (LNK2001), while Clang and GCC accept both.
+int main(int argc, char* argv[])
 {
     if (qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM")) {
         qputenv("QT_QPA_PLATFORM", "offscreen");

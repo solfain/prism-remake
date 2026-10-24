@@ -97,9 +97,7 @@ its `org.prismlauncher` Java package.
 
 Kept deliberately small, so a merge of upstream stays easy:
 
-- `CMakeLists.txt`: with MSVC, `/GL` and `/LTCG` follow `ENABLE_LTO` instead of being added to every Release build (upstream's
-  presets turn `ENABLE_LTO` on, so builds made from them are unchanged). Reason: the whole-program link ran a 16 GB CI runner out of
-  memory. Also new: the `Launcher_VERSION_CHANNEL` option.
+- `CMakeLists.txt`: the `Launcher_VERSION_CHANNEL` option (the text after the version of an untagged build).
 - `program_info/win_install.nsi.in`: the updater executable is `File /nonfatal`, because SOL builds do not enable the updater.
 - `launcher/ui/themes/ITheme.*`: two virtual hooks (`createStyle()`, `preferredColorScheme()`) with the old behaviour as default.
 

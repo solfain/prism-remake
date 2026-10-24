@@ -1,10 +1,10 @@
 # Builds with the given CMake preset on a Windows runner, and explains itself if the build dies.
 #
-# Why this exists: a build once stopped with "exit code 127" and a log that ended in the middle of a line, with nothing in the
-# raw log to say why. Git Bash turns a Windows NTSTATUS into such a small number, so this runs under PowerShell, which shows
-# the real one, samples the memory of the machine while the compiler runs (a hosted Windows runner has about 16 GB, and Qt-heavy
-# translation units need a lot of it) and, on failure, repeats the evidence as an error annotation: the end of the build log,
-# the last memory samples, and the Windows Application event log of the last minutes (a crashed process shows up there).
+# Why this exists: a build once stopped with "exit code 127" and a log tail that ended in the middle of a line, and the raw job log
+# is not always reachable. Git Bash turns a Windows exit status into such a small number, so this runs under PowerShell, which
+# shows the real one, and on failure repeats the evidence as an error annotation: the failing command and what it printed (the
+# cause turned out to be an ordinary linker error that the truncated tail had cut off), the last memory samples and the Windows
+# Application event log of the last minutes (a crashed process would show up there). Cheap enough to keep.
 #
 # usage: .github/scripts/build-windows.ps1 -Preset windows_msvc -Config Release -Parallel 3
 param(
