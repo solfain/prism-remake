@@ -130,6 +130,9 @@ AboutDialog::AboutDialog(QWidget* parent) : QDialog(parent), ui(new Ui::AboutDia
     ui->copyLabel->setText(BuildConfig.LAUNCHER_COPYRIGHT);
 
     connect(ui->closeButton, &QPushButton::clicked, this, &AboutDialog::close);
+    // Enter should close this dialog, not open "About Qt": the first button of a dialog is its default one unless told otherwise
+    ui->aboutQt->setAutoDefault(false);
+    ui->closeButton->setDefault(true);
 
     connect(ui->aboutQt, &QPushButton::clicked, APPLICATION, &QApplication::aboutQt);
 }
