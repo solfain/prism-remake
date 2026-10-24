@@ -860,6 +860,8 @@ SET(LAUNCHER_SOURCES
     ui/themes/ITheme.h
     ui/themes/HintOverrideProxyStyle.cpp
     ui/themes/HintOverrideProxyStyle.h
+    ui/themes/SolTheme.cpp
+    ui/themes/SolTheme.h
     ui/themes/SystemTheme.cpp
     ui/themes/SystemTheme.h
     ui/themes/IconTheme.cpp
@@ -1207,6 +1209,7 @@ qt_add_resources(LAUNCHER_RESOURCES
     resources/flat_white/flat_white.qrc
     resources/documents/documents.qrc
     resources/shaders/shaders.qrc
+    resources/sol/sol.qrc
     "${CMAKE_CURRENT_BINARY_DIR}/../${Launcher_Branding_LogoQRC}"
 )
 

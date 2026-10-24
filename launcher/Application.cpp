@@ -79,6 +79,7 @@
 
 #include "ui/pagedialog/PageDialog.h"
 
+#include "ui/themes/SolTheme.h"
 #include "ui/themes/ThemeManager.h"
 
 #include "ApplicationMessage.h"
@@ -1271,23 +1272,14 @@ bool Application::createSetupWizard()
     if (wizardRequired) {
         const bool darkMode = QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark;
         // set default theme after going into theme wizard
+        // SOL Launcher ships its own look on every platform: the system colour scheme only decides light vs. dark.
         if (!validIcons) {
-            QString defaultIconTheme;
-            if (QApplication::style()->name() == "breeze") {
-                defaultIconTheme = darkMode ? "breeze_dark" : "breeze_light";
-            } else {
-                defaultIconTheme = darkMode ? "flat_white" : "flat";
-            }
+            const QString defaultIconTheme = darkMode ? QStringLiteral("flat_white") : QStringLiteral("flat");
 
             settings()->set("IconTheme", defaultIconTheme);
         }
         if (!validWidgets) {
-#if defined(Q_OS_LINUX)
-            const QString style = "system";
-#else
-            const QString style = darkMode ? QStringLiteral("dark") : QStringLiteral("bright");
-
-#endif
+            const QString style = SolTheme::idFor(darkMode ? SolTheme::Variant::Dark : SolTheme::Variant::Light);
 
             settings()->set("ApplicationTheme", style);
         }

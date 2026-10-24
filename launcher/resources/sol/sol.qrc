@@ -1,0 +1,27 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource prefix="/sol">
+        <file>tokens.json</file>
+        <file>sol.qss.in</file>
+        <file>light/check-disabled.svg</file>
+        <file>light/check.svg</file>
+        <file>light/chevron-down-disabled.svg</file>
+        <file>light/chevron-down.svg</file>
+        <file>light/chevron-right.svg</file>
+        <file>light/chevron-up-disabled.svg</file>
+        <file>light/chevron-up.svg</file>
+        <file>light/indeterminate.svg</file>
+        <file>light/radio-dot-disabled.svg</file>
+        <file>light/radio-dot.svg</file>
+        <file>dark/check-disabled.svg</file>
+        <file>dark/check.svg</file>
+        <file>dark/chevron-down-disabled.svg</file>
+        <file>dark/chevron-down.svg</file>
+        <file>dark/chevron-right.svg</file>
+        <file>dark/chevron-up-disabled.svg</file>
+        <file>dark/chevron-up.svg</file>
+        <file>dark/indeterminate.svg</file>
+        <file>dark/radio-dot-disabled.svg</file>
+        <file>dark/radio-dot.svg</file>
+    </qresource>
+</RCC>

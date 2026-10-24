@@ -163,6 +163,8 @@ void PageContainer::createUI()
 {
     m_pageStack = new QStackedLayout;
     m_pageList = new PageView;
+    // PageView has no Q_OBJECT, so stylesheets cannot select it by type; give it a name instead
+    m_pageList->setObjectName(QStringLiteral("pageList"));
     m_header = new QLabel();
 
     QFont headerLabelFont = m_header->font();

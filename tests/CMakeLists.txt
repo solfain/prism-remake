@@ -24,6 +24,7 @@ set(TEST_SOURCES
     ModrinthUrl_test.cpp
     MetaComponentParse_test.cpp
     CatPack_test.cpp
+    SolTheme_test.cpp
     XmlLogs_test.cpp
     Commandline_test.cpp
 )

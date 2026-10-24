@@ -132,38 +132,33 @@ void VersionListView::paintInfoLabel(QPaintEvent* event) const
 {
     QString emptyString = currentEmptyString();
 
-    // calculate the rect for the overlay
+    // A quiet hint, centred in the empty list: muted text straight on whatever the theme paints behind it
+    // (this used to be a filled dark box, which is far too loud on a light theme).
     QPainter painter(viewport());
     painter.setRenderHint(QPainter::Antialiasing, true);
-    QFont font("sans", 20);
-    font.setBold(true);
+    QFont font(QApplication::font());
+    if (font.pointSizeF() > 1.0) {
+        font.setPointSizeF(font.pointSizeF() + 3.0);
+    }
+    font.setWeight(QFont::DemiBold);
 
     QRect bounds = viewport()->geometry();
     bounds.moveTop(0);
     auto innerBounds = bounds;
     innerBounds.adjust(10, 10, -10, -10);
 
-    QColor background = QApplication::palette().color(QPalette::WindowText);
-    QColor foreground = QApplication::palette().color(QPalette::Base);
-    foreground.setAlpha(190);
+    QColor textColor = QApplication::palette().color(QPalette::WindowText);
+    textColor.setAlphaF(0.55F);
     painter.setFont(font);
     auto fontMetrics = painter.fontMetrics();
     auto textRect = fontMetrics.boundingRect(innerBounds, Qt::AlignHCenter | Qt::TextWordWrap, emptyString);
     textRect.moveCenter(bounds.center());
 
-    auto wrapRect = textRect;
-    wrapRect.adjust(-10, -10, 10, 10);
-
     // check if we are allowed to draw in our area
-    if (!event->rect().intersects(wrapRect)) {
+    if (!event->rect().intersects(textRect.adjusted(-10, -10, 10, 10))) {
         return;
     }
 
-    painter.setBrush(QBrush(background));
-    painter.setPen(foreground);
-    painter.drawRoundedRect(wrapRect, 5.0, 5.0);
-
-    painter.setPen(foreground);
-    painter.setFont(font);
+    painter.setPen(textColor);
     painter.drawText(textRect, Qt::AlignHCenter | Qt::TextWordWrap, emptyString);
 }

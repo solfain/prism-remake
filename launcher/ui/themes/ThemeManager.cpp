@@ -18,6 +18,8 @@
  */
 #include "ThemeManager.h"
 
+#include <algorithm>
+
 #include <QApplication>
 #include <QDir>
 #include <QDirListing>
@@ -30,6 +32,7 @@
 #include "ui/themes/CatPack.h"
 #include "ui/themes/CustomTheme.h"
 #include "ui/themes/DarkTheme.h"
+#include "ui/themes/SolTheme.h"
 #include "ui/themes/SystemTheme.h"
 
 #include "Application.h"
@@ -142,6 +145,8 @@ void ThemeManager::initializeIcons()
 void ThemeManager::initializeWidgets()
 {
     themeDebugLog() << "<> Initializing Widget Themes";
+    themeDebugLog() << "Loading Built-in Theme:" << addTheme(std::make_unique<SolTheme>(SolTheme::Variant::Light));
+    themeDebugLog() << "Loading Built-in Theme:" << addTheme(std::make_unique<SolTheme>(SolTheme::Variant::Dark));
     themeDebugLog() << "Loading Built-in Theme:" << addTheme(std::make_unique<SystemTheme>(m_defaultStyle, m_defaultPalette, true));
     auto darkThemeId = addTheme(std::make_unique<DarkTheme>());
     themeDebugLog() << "Loading Built-in Theme:" << darkThemeId;
@@ -213,6 +218,8 @@ QList<ITheme*> ThemeManager::getValidApplicationThemes()
     for (auto&& [id, theme] : m_themes) {
         ret.append(theme.get());
     }
+    // SOL Launcher's own themes are listed first, everything else keeps its (alphabetical) order
+    std::stable_partition(ret.begin(), ret.end(), [](ITheme* theme) { return SolTheme::isSolThemeId(theme->id()); });
     return ret;
 }
 
