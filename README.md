@@ -30,7 +30,7 @@ Linux build that only had Open Sans installed, so on Windows the same screens re
 ## What is different
 
 - **A new visual identity.** A restrained, lavender-tinted light theme (and a matching dark one) with a deliberately
-  low-chroma violet accent: flat surfaces, hairline borders, no gradients, glow or glass. The logo is a simple iceberg.
+  low-chroma violet accent: flat surfaces, hairline borders, no gradients, glow or glass. The logo is one shape: a diamond split at the waterline.
   See [docs/sol/DESIGN.md](docs/sol/DESIGN.md).
 - **A sidebar-based main window.** Navigation (add instance, folders, settings, help, accounts) lives in a sidebar,
   instances are shown as cards under a page header, and the selected instance's actions sit in a panel on the right.
