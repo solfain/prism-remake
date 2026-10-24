@@ -3,18 +3,21 @@
 #
 # SOL Launcher - Minecraft Launcher
 # Copyright (C) 2026 SOL Launcher Contributors
-"""Regenerates SOL Launcher's application icons from the iceberg geometry below.
+"""Regenerates SOL Launcher's application icons from the mark defined below.
 
-The mark is a deliberately simple iceberg: a lit tip above the waterline and a larger submerged mass below it, separated
-by a thin gap (the waterline). It has no strokes, so it stays legible down to 16 px.
+The mark is one deliberately simple shape: a diamond split at the waterline. The lit tip above the line is the part of
+the iceberg you see, the larger, calmer mass below it is the part you don't. Two flat tones, no strokes, so it stays
+legible down to 16 px.
 
 Usage (from anywhere):
 
     pip install PySide6-Essentials Pillow
-    python3 program_info/gen_sol_icons.py
+    python3 program_info/gen_sol_icons.py             # the default mark, "berg"
+    python3 program_info/gen_sol_icons.py --mark frost    # or: berg, gem, shard, floe, frost
+    python3 program_info/gen_sol_icons.py --list
 
 Writes next to this script:
-    io.github.solfain.SOLLauncher.svg            application icon (rounded dark tile, light iceberg)
+    io.github.solfain.SOLLauncher.svg            application icon (rounded dark tile, light mark)
     io.github.solfain.SOLLauncher_256.png        256 px render of the application icon
     io.github.solfain.SOLLauncher.logo.svg       plain mark for light backgrounds (README, web)
     io.github.solfain.SOLLauncher.logo-darkmode.svg   plain mark for dark backgrounds
@@ -37,34 +40,48 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 APP_ID = "io.github.solfain.SOLLauncher"
 BINARY = "sollauncher"
 
-# --- geometry on a 256x256 grid ------------------------------------------------------------------------------------
-TIP_LEFT = "72,136 112,84 134,40 150,78 150,136"  # lit facet, left of the main ridge
-TIP_RIGHT = "134,40 150,78 168,62 192,136 150,136"  # shaded facet, with the small second peak
-BODY_LEFT = "40,152 150,152 150,246 110,230 64,200 34,172"  # submerged mass, left half
-BODY_RIGHT = "150,152 216,152 230,178 200,222 150,246"  # submerged mass, right half
-WATERLINE = (22, 141, 212, 5)  # x, y, width, height (rounded)
+# --- marks, on a 256x256 grid ---------------------------------------------------------------------------------------
+# Every shape has a colour role: "tip" (the lit, light part) or "mass" (the calmer, deeper part). A shape is either
+# ("poly", "x,y x,y ...") or ("bar", cx, cy, length, thickness, degrees) for a round-capped bar.
+MARKS = {
+    # default: a diamond split at the waterline. Two triangles, a thin gap between them.
+    "berg": [("mass", ("poly", "52,128 204,128 128,224")), ("tip", ("poly", "128,38 52,116 204,116"))],
+    # the same diamond, split vertically
+    "gem": [("tip", ("poly", "128,34 60,112 128,224")), ("mass", ("poly", "128,34 196,112 128,224"))],
+    # a single two-facet shard
+    "shard": [("tip", ("poly", "116,38 46,210 134,210")), ("mass", ("poly", "116,38 134,210 210,210"))],
+    # the iceberg as one silhouette: tip above the waterline, mass below
+    "floe": [
+        ("tip", ("poly", "66,136 110,80 132,38 156,88 172,70 198,136")),
+        ("mass", ("poly", "66,136 198,136 226,168 198,214 146,236 94,226 54,186 40,164")),
+    ],
+    # a six-spoke frost crystal
+    "frost": [("tip", ("bar", 128, 128, 176, 24, 90)), ("mass", ("bar", 128, 128, 176, 24, 30)), ("mass", ("bar", 128, 128, 176, 24, 150))],
+}
+MARK = "berg"
 
 # --- palette -------------------------------------------------------------------------------------------------------
 TILE = "#2B2636"
-APP = dict(tip_a="#F6F4FB", tip_b="#D6D0E6", body_a="#8E84AE", body_b="#7A7096", line="#B4ACCB")
-MARK_LIGHT = dict(tip_a="#5E4E7C", tip_b="#4A3D63", body_a="#B5ABD0", body_b="#A398C2", line="#9C93B8")
-MARK_DARK = dict(tip_a="#F1EEF8", tip_b="#CFC8E0", body_a="#6E6490", body_b="#5E5580", line="#8379A6")
+APP = dict(tip="#F6F4FB", mass="#B7ACD6")  # on the dark tile
+MARK_LIGHT = dict(tip="#5E4E7C", mass="#B5ABD0")  # on light pages
+MARK_DARK = dict(tip="#F1EEF8", mass="#6E6490")  # on dark pages
 
 LICENSE_NOTE = "SOL Launcher logo. Copyright (C) 2026 SOL Launcher Contributors. Distributed with SOL Launcher under GPL-3.0-only."
 
 
-def glyph(colors, indent="  "):
-    x, y, w, h = WATERLINE
-    return "\n".join(
-        indent + line
-        for line in (
-            f'<polygon points="{BODY_LEFT}" fill="{colors["body_a"]}"/>',
-            f'<polygon points="{BODY_RIGHT}" fill="{colors["body_b"]}"/>',
-            f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="{h / 2}" fill="{colors["line"]}"/>',
-            f'<polygon points="{TIP_LEFT}" fill="{colors["tip_a"]}"/>',
-            f'<polygon points="{TIP_RIGHT}" fill="{colors["tip_b"]}"/>',
-        )
+def element(shape, fill, indent=""):
+    if shape[0] == "poly":
+        return f'{indent}<polygon points="{shape[1]}" fill="{fill}"/>'
+    _, cx, cy, length, thick, deg = shape
+    return (
+        f'{indent}<rect x="{cx - thick / 2:g}" y="{cy - length / 2:g}" width="{thick}" height="{length}" rx="{thick / 2:g}" '
+        f'transform="rotate({deg} {cx} {cy})" fill="{fill}"/>'
     )
+
+
+def glyph(colors, indent="  ", roles=None):
+    """SVG elements of the current mark. `roles` limits the output to some colour roles (used for the macOS layers)."""
+    return "\n".join(element(shape, colors[role], indent) for role, shape in MARKS[MARK] if roles is None or role in roles)
 
 
 def svg(colors, tile=None, glyph_scale=1.0, tile_scale=1.0, width=256, title="SOL Launcher Logo"):
@@ -119,6 +136,17 @@ def render_png(svg_text, size):
 
 
 def main():
+    global MARK
+    args = sys.argv[1:]
+    if "--list" in args:
+        print("marks:", ", ".join(MARKS), f"(default: berg)")
+        return
+    if "--mark" in args:
+        MARK = args[args.index("--mark") + 1]
+        if MARK not in MARKS:
+            raise SystemExit(f"unknown mark {MARK!r}; choose one of: {', '.join(MARKS)}")
+    print("mark:", MARK)
+
     from PySide6.QtGui import QGuiApplication
 
     _app = QGuiApplication.instance() or QGuiApplication(sys.argv[:1])
@@ -160,22 +188,10 @@ def main():
             f"  <title>{title}</title>\n{body}\n</svg>\n"
         )
 
-    x, y, w, h = WATERLINE
-    body = "\n".join(
-        [
-            f'  <polygon points="{BODY_LEFT}" fill="{APP["body_a"]}"/>',
-            f'  <polygon points="{BODY_RIGHT}" fill="{APP["body_b"]}"/>',
-            f'  <rect x="{x}" y="{y}" width="{w}" height="{h}" rx="{h / 2}" fill="{APP["line"]}"/>',
-        ]
-    )
-    tip = "\n".join(
-        [
-            f'  <polygon points="{TIP_LEFT}" fill="{APP["tip_a"]}"/>',
-            f'  <polygon points="{TIP_RIGHT}" fill="{APP["tip_b"]}"/>',
-        ]
-    )
-    write(os.path.join(layers, "Assets", "body.svg"), layer_svg("SOL Launcher Logo - submerged mass", body))
-    write(os.path.join(layers, "Assets", "tip.svg"), layer_svg("SOL Launcher Logo - tip", tip))
+    body = glyph(APP, "  ", roles=("mass",))
+    tip = glyph(APP, "  ", roles=("tip",))
+    write(os.path.join(layers, "Assets", "body.svg"), layer_svg("SOL Launcher Logo - lower part", body))
+    write(os.path.join(layers, "Assets", "tip.svg"), layer_svg("SOL Launcher Logo - upper part", tip))
 
     def layer(image, name, **extra):
         data = {"image-name": image, "name": name, "position": {"scale": 15.5, "translation-in-points": [0, 0]}}
