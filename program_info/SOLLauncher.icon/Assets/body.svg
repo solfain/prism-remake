@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SOL Launcher logo. Copyright (C) 2026 SOL Launcher Contributors. Distributed with SOL Launcher under GPL-3.0-only. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 256 256">
+  <title>SOL Launcher Logo - submerged mass</title>
+  <polygon points="40,152 150,152 150,246 110,230 64,200 34,172" fill="#8E84AE"/>
+  <polygon points="150,152 216,152 230,178 200,222 150,246" fill="#7A7096"/>
+  <rect x="22" y="141" width="212" height="5" rx="2.5" fill="#B4ACCB"/>
+</svg>
