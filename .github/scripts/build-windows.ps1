@@ -43,8 +43,14 @@ $hex = '0x{0:X8}' -f [BitConverter]::ToUInt32([BitConverter]::GetBytes([int]$cod
 if ($code -ne 0) {
     $parts = @()
     $parts += "exit code $code ($hex), after {0:N0} s" -f ((Get-Date) - $started).TotalSeconds
-    $parts += '--- end of the build log'
-    $parts += @(Get-Content $log -Tail 25)
+    # Annotations hold about 4 KB, and a link command line alone can be 2.5 KB: start at the failing command and shorten long lines,
+    # so that what the tool printed after its command line (the actual error) is not cut off.
+    $all = @(Get-Content $log)
+    $failedAt = -1
+    for ($i = $all.Count - 1; $i -ge 0; $i--) { if ($all[$i] -like 'FAILED:*') { $failedAt = $i; break } }
+    $start = if ($failedAt -ge 0) { $failedAt } else { [Math]::Max(0, $all.Count - 25) }
+    $parts += '--- the failing command and its output (long lines shortened)'
+    $parts += @($all[$start..($all.Count - 1)] | Select-Object -First 30 | ForEach-Object { if ($_.Length -gt 240) { $_.Substring(0, 160) + ' [...] ' + $_.Substring($_.Length - 70) } else { $_ } })
     $parts += '--- memory samples (last 12)'
     $parts += @($samples | Select-Object -Last 12)
     $parts += '--- Application event log, errors of the last 30 minutes'

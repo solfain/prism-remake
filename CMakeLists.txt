@@ -40,6 +40,9 @@ add_compile_definitions(QT_WARN_DEPRECATED_UP_TO=0x060800)
 add_compile_definitions(QT_DISABLE_DEPRECATED_UP_TO=0x060800)
 add_compile_definitions(QT_NO_CONTEXTLESS_CONNECT)
 
+# Declared here (it is used right below, and again further down) so that the MSVC flags can follow it.
+option(ENABLE_LTO "Enable Link Time Optimization" off)
+
 if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
     add_compile_options(
         # /GS Adds buffer security checks, default on but included anyway to mirror gcc's fstack-protector flag
@@ -52,16 +55,24 @@ if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
     )
 
     add_link_options(
-        # /LTCG allows for linking wholy optimizated programs
         # /MANIFEST:NO disables generating a manifest file, we instead provide our own
         # /STACK sets the stack reserve size, ATL's pack list needs 3-4 MiB as of November 2022, provide 8 MiB
-        "$<$<COMPILE_LANGUAGE:C,CXX>:/LTCG;/MANIFEST:NO;/STACK:8388608>"
+        "$<$<COMPILE_LANGUAGE:C,CXX>:/MANIFEST:NO;/STACK:8388608>"
     )
 
-    # /GL enables whole program optimizations
-    # NOTE: With Clang, this is implemented as regular LTO and only used during linking
-    if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-        add_compile_options("$<$<AND:$<CONFIG:Release,RelWithDebInfo>,$<COMPILE_LANGUAGE:C,CXX>>:/GL>")
+    # SOL Launcher: whole program optimization (/GL when compiling, /LTCG when linking) is only used when ENABLE_LTO asks for it.
+    # Upstream applies it to every Release build, but then every link (the test executable included) is a whole-program code
+    # generation pass over a very large static library, which needs more memory than a 16 GB machine has to spare: the Release
+    # build of the Windows CI died in the link step. A launcher does not need the few percent it brings.
+    if(ENABLE_LTO)
+        # /LTCG allows for linking wholy optimizated programs
+        add_link_options("$<$<COMPILE_LANGUAGE:C,CXX>:/LTCG>")
+
+        # /GL enables whole program optimizations
+        # NOTE: With Clang, this is implemented as regular LTO and only used during linking
+        if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+            add_compile_options("$<$<AND:$<CONFIG:Release,RelWithDebInfo>,$<COMPILE_LANGUAGE:C,CXX>>:/GL>")
+        endif()
     endif()
 
     # See https://github.com/ccache/ccache/issues/1040

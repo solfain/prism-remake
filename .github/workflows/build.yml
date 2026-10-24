@@ -132,8 +132,7 @@ jobs:
 
       - name: Build
         shell: pwsh
-        # three parallel compiles instead of ninja's default (cores + 2): Qt-heavy translation units need a lot of memory
-        run: .github/scripts/build-windows.ps1 -Preset windows_msvc -Config $env:BUILD_TYPE -Parallel 3
+        run: .github/scripts/build-windows.ps1 -Preset windows_msvc -Config $env:BUILD_TYPE
 
       - name: Disk space after the build
         if: always()
