@@ -95,7 +95,9 @@ Config::Config()
         GIT_COMMIT = "";
     }
 
-    if (GIT_REFSPEC.startsWith("refs/heads/")) {
+    if (!QStringLiteral("@Launcher_VERSION_CHANNEL@").isEmpty()) {
+        VERSION_CHANNEL = QStringLiteral("@Launcher_VERSION_CHANNEL@");
+    } else if (GIT_REFSPEC.startsWith("refs/heads/")) {
         VERSION_CHANNEL = GIT_REFSPEC;
         VERSION_CHANNEL.remove("refs/heads/");
     } else if (!GIT_COMMIT.isEmpty()) {

@@ -299,6 +299,10 @@ message(STATUS "Git commit: ${Launcher_GIT_COMMIT}")
 message(STATUS "Git tag: ${Launcher_GIT_TAG}")
 message(STATUS "Git refspec: ${Launcher_GIT_REFSPEC}")
 
+# The text after the version number of a build that is not a tagged release ("1.0.0-preview"). Left empty it is the git
+# branch the build was made from, which is right for a developer and meaningless to anyone who installs a CI build.
+set(Launcher_VERSION_CHANNEL "" CACHE STRING "Channel shown after the version of untagged builds, e.g. \"preview\" (default: the git branch)")
+
 string(TIMESTAMP TODAY "%Y-%m-%d")
 set(Launcher_BUILD_TIMESTAMP "${TODAY}")
 

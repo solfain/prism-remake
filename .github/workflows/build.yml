@@ -103,6 +103,7 @@ jobs:
           bash .github/scripts/ci-run.sh "Configure" cmake --preset windows_msvc \
             -D VCPKG_HOST_TRIPLET="$VCPKG_TRIPLET" -D VCPKG_TARGET_TRIPLET="$VCPKG_TRIPLET" \
             -D ENABLE_LTO=OFF \
+            -D Launcher_VERSION_CHANNEL=preview \
             -D Launcher_MSA_CLIENT_ID="$SOL_MSA_CLIENT_ID" \
             -D Launcher_CURSEFORGE_API_KEY="$SOL_CURSEFORGE_API_KEY"
 

@@ -98,6 +98,7 @@ All of these are CMake cache variables (`-DName=value`); the defaults live in th
 | `Launcher_META_URL` | Prism Launcher project's metadata | Where Minecraft / loader version lists come from. |
 | `Launcher_BUILD_ARTIFACT` | *(empty)* | Set together with `Launcher_UPDATER_GITHUB_REPO` to build the self-updater. |
 | `Launcher_BUILD_PLATFORM` | `unknown` | Free-form label shown in the About dialog. |
+| `Launcher_VERSION_CHANNEL` | *(empty)* | Text after the version of an untagged build (`1.0.0-preview`). Empty means the git branch name. |
 
 The Microsoft client ID and the CurseForge key can also be entered at run time in **Settings > APIs**, which overrides
 the build-time value. See [FORK_NOTES.md](FORK_NOTES.md) for why the keys are empty by default.
