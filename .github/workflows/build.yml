@@ -100,7 +100,7 @@ jobs:
           SOL_MSA_CLIENT_ID: ${{ vars.SOL_MSA_CLIENT_ID }}
           SOL_CURSEFORGE_API_KEY: ${{ secrets.SOL_CURSEFORGE_API_KEY }}
         run: |
-          cmake --preset windows_msvc \
+          bash .github/scripts/ci-run.sh "Configure" cmake --preset windows_msvc \
             -D VCPKG_HOST_TRIPLET="$VCPKG_TRIPLET" -D VCPKG_TARGET_TRIPLET="$VCPKG_TRIPLET" \
             -D ENABLE_LTO=OFF \
             -D Launcher_MSA_CLIENT_ID="$SOL_MSA_CLIENT_ID" \
@@ -115,11 +115,11 @@ jobs:
 
       - name: Build
         shell: bash
-        run: cmake --build --preset windows_msvc --config "$BUILD_TYPE"
+        run: bash .github/scripts/ci-run.sh "Build" cmake --build --preset windows_msvc --config "$BUILD_TYPE"
 
       - name: Test
         shell: bash
-        run: ctest --preset windows_msvc --build-config "$BUILD_TYPE"
+        run: bash .github/scripts/ci-run.sh "Tests" ctest --preset windows_msvc --build-config "$BUILD_TYPE"
 
       - name: Package (install tree and portable)
         shell: pwsh
@@ -238,13 +238,13 @@ jobs:
 
       - name: Configure
         run: |
-          cmake --preset linux \
+          bash .github/scripts/ci-run.sh "Configure" cmake --preset linux \
             -D VCPKG_HOST_TRIPLET="$VCPKG_TRIPLET" -D VCPKG_TARGET_TRIPLET="$VCPKG_TRIPLET"
 
       - name: Build
-        run: cmake --build --preset linux --config "$BUILD_TYPE"
+        run: bash .github/scripts/ci-run.sh "Build" cmake --build --preset linux --config "$BUILD_TYPE"
 
       - name: Test
         env:
           QT_QPA_PLATFORM: offscreen
-        run: ctest --preset linux --build-config "$BUILD_TYPE"
+        run: bash .github/scripts/ci-run.sh "Tests" ctest --preset linux --build-config "$BUILD_TYPE"
