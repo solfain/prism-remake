@@ -65,6 +65,9 @@ class ITheme {
     virtual QStringList searchPaths() { return {}; }
     // The application style apply() installs. A theme can return a variant of the usual proxy style (the caller takes ownership).
     virtual QStyle* createStyle();
+    // The colour scheme window frames (title bars) should follow. Unknown, the default, leaves it to the system, which is how every
+    // theme has always behaved; a theme that is dark or light by design says so, so its frames match it whatever the system is set to.
+    virtual Qt::ColorScheme preferredColorScheme() { return Qt::ColorScheme::Unknown; }
 
     static QPalette fadeInactive(QPalette in, qreal bias, QColor color);
     static LogColors defaultLogColors(const QPalette& palette);

@@ -49,6 +49,7 @@ class SolTheme : public FusionTheme {
     QColor fadeColor() override;
     LogColors logColorScheme() override;
     QStyle* createStyle() override;
+    Qt::ColorScheme preferredColorScheme() override;
 
    private:
     QColor token(const QString& key) const;

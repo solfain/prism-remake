@@ -35,6 +35,8 @@
  */
 #include "ITheme.h"
 #include <QDir>
+#include <QGuiApplication>
+#include <QStyleHints>
 #include <QStyleFactory>
 #include "Application.h"
 #include "HintOverrideProxyStyle.h"
@@ -49,6 +51,12 @@ void ITheme::apply(bool)
 {
     APPLICATION->setStyleSheet(QString());
     QApplication::setStyle(createStyle());
+    if (preferredColorScheme() == Qt::ColorScheme::Unknown) {
+        QGuiApplication::styleHints()->unsetColorScheme();
+    } else {
+        QGuiApplication::styleHints()->setColorScheme(preferredColorScheme());
+    }
+    qDebug() << "[Theme] preferred colour scheme" << preferredColorScheme() << "-> effective" << QGuiApplication::styleHints()->colorScheme();
     QApplication::setPalette(colorScheme());
     APPLICATION->setStyleSheet(appStyleSheet());
     QDir::setSearchPaths("theme", searchPaths());

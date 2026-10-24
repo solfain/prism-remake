@@ -187,6 +187,11 @@ class SolStyle : public HintOverrideProxyStyle {
 };
 }  // namespace
 
+Qt::ColorScheme SolTheme::preferredColorScheme()
+{
+    return m_variant == Variant::Dark ? Qt::ColorScheme::Dark : Qt::ColorScheme::Light;
+}
+
 QStyle* SolTheme::createStyle()
 {
     return new SolStyle(QStyleFactory::create(qtTheme()));
