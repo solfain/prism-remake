@@ -135,6 +135,28 @@ def render_png(svg_text, size):
     return Image.open(io.BytesIO(bytes(buffer.data()))).convert("RGBA")
 
 
+def reorder_ico(path):
+    """Pillow writes the images of an .ico smallest first. Prism's icon (and most Windows tooling) lists the largest first, and
+    NSIS accepted that layout, so keep it: same images, same bytes, directory sorted by size descending."""
+    with open(path, "rb") as fh:
+        data = fh.read()
+    _, kind, count = struct.unpack_from("<HHH", data, 0)
+    entries = []
+    for index in range(count):
+        width, height, colours, reserved, planes, bits, size, offset = struct.unpack_from("<BBBBHHII", data, 6 + 16 * index)
+        entries.append((width or 256, height or 256, colours, reserved, planes, bits, data[offset : offset + size]))
+    entries.sort(key=lambda entry: -entry[0])
+    out = bytearray(struct.pack("<HHH", 0, kind, count))
+    offset = 6 + 16 * count
+    for width, height, colours, reserved, planes, bits, blob in entries:
+        out += struct.pack("<BBBBHHII", width % 256, height % 256, colours, reserved, planes, bits, len(blob), offset)
+        offset += len(blob)
+    for entry in entries:
+        out += entry[6]
+    with open(path, "wb") as fh:
+        fh.write(out)
+
+
 def main():
     global MARK
     args = sys.argv[1:]
@@ -167,6 +189,7 @@ def main():
     frames = [render_png(app_svg, s) for s in sizes]
     ico_path = os.path.join(HERE, f"{BINARY}.ico")
     frames[0].save(ico_path, format="ICO", sizes=[(s, s) for s in sizes], append_images=frames[1:], bitmap_format="bmp")
+    reorder_ico(ico_path)
     print("wrote", f"{BINARY}.ico", "(sizes: %s)" % ", ".join(str(s) for s in sizes))
 
     # --- macOS .icns: rounded tile with the customary transparent margin ---------------------------------------------

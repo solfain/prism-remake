@@ -376,7 +376,8 @@ Section "@Launcher_DisplayName@"
 
   File "@Launcher_APP_BINARY_NAME@.exe"
   File "@Launcher_APP_BINARY_NAME@_filelink.exe"
-  File "@Launcher_APP_BINARY_NAME@_updater.exe"
+  ; the updater only exists in builds that enable the self-updater (SOL builds do not, yet)
+  File /nonfatal "@Launcher_APP_BINARY_NAME@_updater.exe"
   File "qt.conf"
   File "qtlogging.ini"
   File *.dll

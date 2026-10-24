@@ -6,6 +6,11 @@ name: Build
 # Derived from the Prism Launcher project's build workflow (GPL-3.0). Differences: no code signing, no macOS / ARM /
 # MinGW jobs, no vcpkg NuGet cache (a plain file cache is used), and the self-updater is NOT enabled (it needs
 # Launcher_BUILD_ARTIFACT, which is deliberately left unset until SOL Launcher has proper releases).
+#
+# Microsoft sign-in: set the repository VARIABLE SOL_MSA_CLIENT_ID (Settings > Secrets and variables > Actions > Variables)
+# to your Entra application (client) ID and every build from then on ships with sign-in enabled, so users never see the
+# setup window (see docs/sol/MICROSOFT_SIGN_IN.md). Optionally set the SECRET SOL_CURSEFORGE_API_KEY for CurseForge.
+# Both default to empty, which is a valid configuration.
 
 on:
   push:
@@ -79,8 +84,9 @@ jobs:
           echo "VCPKG_SUBMODULE_SHA=$(git -C cmake/vcpkg rev-parse HEAD)" >> "$GITHUB_ENV"
           mkdir -p "$VCPKG_DEFAULT_BINARY_CACHE"
 
-      - name: Cache vcpkg packages
-        uses: actions/cache@v6.1.0
+      - name: Restore the vcpkg package cache
+        id: vcpkg-cache
+        uses: actions/cache/restore@v6.1.0
         with:
           path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
           key: vcpkg-windows-${{ env.VCPKG_SUBMODULE_SHA }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
@@ -89,10 +95,23 @@ jobs:
 
       - name: Configure
         shell: bash
+        env:
+          # empty unless configured in the repository settings; a Microsoft client ID is a public identifier, not a secret
+          SOL_MSA_CLIENT_ID: ${{ vars.SOL_MSA_CLIENT_ID }}
+          SOL_CURSEFORGE_API_KEY: ${{ secrets.SOL_CURSEFORGE_API_KEY }}
         run: |
           cmake --preset windows_msvc \
             -D VCPKG_HOST_TRIPLET="$VCPKG_TRIPLET" -D VCPKG_TARGET_TRIPLET="$VCPKG_TRIPLET" \
-            -D ENABLE_LTO=OFF
+            -D ENABLE_LTO=OFF \
+            -D Launcher_MSA_CLIENT_ID="$SOL_MSA_CLIENT_ID" \
+            -D Launcher_CURSEFORGE_API_KEY="$SOL_CURSEFORGE_API_KEY"
+
+      - name: Save the vcpkg package cache
+        if: ${{ always() && steps.vcpkg-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v6.1.0
+        with:
+          path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
+          key: vcpkg-windows-${{ env.VCPKG_SUBMODULE_SHA }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
 
       - name: Build
         shell: bash
@@ -126,7 +145,14 @@ jobs:
           Expand-Archive -Path NSISPlugins\NScurl.zip -DestinationPath NSISPlugins\NScurl
 
           cd install
-          makensis -NOCD "$env:GITHUB_WORKSPACE/build/program_info/win_install.nsi"
+          $log = & makensis -NOCD "$env:GITHUB_WORKSPACE/build/program_info/win_install.nsi" 2>&1 | Out-String
+          Write-Host $log
+          if ($LASTEXITCODE -ne 0) {
+            # surface the end of the compiler output as an annotation so it is visible on the run summary
+            $tail = (($log -split "`r?`n") | Where-Object { $_ } | Select-Object -Last 30) -join '%0A'
+            Write-Host "::error title=makensis failed (exit code $LASTEXITCODE)::$tail"
+            exit 1
+          }
 
       - name: Upload installer
         uses: actions/upload-artifact@v7
