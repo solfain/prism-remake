@@ -93,6 +93,16 @@ its `org.prismlauncher` Java package.
 - `PrismLauncher-Windows-MSVC-Setup-11.1.1.exe` in the repository root is a Prism Launcher installer that predates the
   source. It is 24 MB, unused by the build, and a likely candidate for removal.
 
+## Where the build deviates from upstream
+
+Kept deliberately small, so a merge of upstream stays easy:
+
+- `CMakeLists.txt`: with MSVC, `/GL` and `/LTCG` follow `ENABLE_LTO` instead of being added to every Release build (upstream's
+  presets turn `ENABLE_LTO` on, so builds made from them are unchanged). Reason: the whole-program link ran a 16 GB CI runner out of
+  memory. Also new: the `Launcher_VERSION_CHANNEL` option.
+- `program_info/win_install.nsi.in`: the updater executable is `File /nonfatal`, because SOL builds do not enable the updater.
+- `launcher/ui/themes/ITheme.*`: two virtual hooks (`createStyle()`, `preferredColorScheme()`) with the old behaviour as default.
+
 ## Pulling in upstream changes
 
 Because the baseline is a snapshot (no shared history with upstream), the first sync needs an explicit merge base. This
