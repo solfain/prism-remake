@@ -57,7 +57,8 @@ QString getCreditsHtml()
     // The developer list below the first heading is Prism Launcher's: SOL is based on their work and must not be
     // presented as the author of it, so it gets its own heading.
     return fileContent.arg(QObject::tr("%1 Contributors").arg(BuildConfig.LAUNCHER_DISPLAYNAME), QObject::tr("Prism Launcher Developers"),
-                           QObject::tr("MultiMC Developers"), QObject::tr("With special thanks to"));
+                           QObject::tr("MultiMC Developers"), QObject::tr("With special thanks to"), QObject::tr("Icons"),
+                           QObject::tr("Line icons by %1, used under the ISC licence.").arg(QStringLiteral("<a href=\"https://lucide.dev\">Lucide</a>")));
 }
 
 QString getLicenseHtml()

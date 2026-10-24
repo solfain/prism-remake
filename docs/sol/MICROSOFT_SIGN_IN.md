@@ -22,6 +22,8 @@ For a local build pass it to CMake instead: `cmake ... -DLauncher_MSA_CLIENT_ID=
 
 ## If you just run a copy that has no ID: use the guided setup
 
+![The guided setup window](screenshots/msa-setup-light.png)
+
 Choose **Add Microsoft account...** (in the sidebar's *Accounts* menu, or **Settings > Accounts > Add Microsoft**). A
 window walks through the same registration (below), shows the two redirect URIs with copy buttons, and takes the
 resulting ID. It is saved to **Settings > APIs > Microsoft Authentication client ID**, where you can change or clear it,

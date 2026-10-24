@@ -16,7 +16,7 @@ SOL Launcher is a **derivative work** of [Prism Launcher](https://github.com/Pri
   `COPYING.md` (shown in the About dialog) keeps the Prism Launcher / PolyMC / MultiMC notices and adds SOL's.
 - **Identity:** the product is called "SOL Launcher". It is not Prism Launcher and is not endorsed by or affiliated with
   the Prism Launcher project; the README, the About dialog, the license tab, the desktop entry, the AppStream metadata
-  and the man page all say so. Prism's logo and icons are not used (the iceberg mark is new; the only remaining Prism
+  and the man page all say so. Prism's logo and icons are not used (the diamond-and-waterline mark is new; the only remaining Prism
   logo is the "Prism Launcher" entry in the instance-icon picker, which exists so imported Prism instances keep their
   icon).
 
@@ -87,9 +87,9 @@ its `org.prismlauncher` Java package.
 
 - `flake.nix`, `nix/`, `default.nix`, `shell.nix`, `Containerfile`, `renovate.json`, `.envrc`: upstream packaging and
   tooling for the Prism Launcher package. They still refer to the Prism names and are not maintained for SOL Launcher.
-- `.github/` (CI workflows, issue templates, funding, code owners) was **not** imported. Add your own CI when you want
-  it; upstream's `build.yml` and its `setup-dependencies` action are a good template (they build with Qt 6.11 and
-  JDK 17 on Windows, Linux and macOS).
+- `.github/`: upstream's CI workflows, issue templates, funding and code owners were **not** imported. SOL has one workflow of
+  its own (`.github/workflows/build.yml`, adapted from upstream's `build.yml`): it builds and tests on Windows (MSVC) and Linux
+  (GCC), and publishes the Windows installer and a portable zip as the rolling *preview* release. See [BUILDING.md](BUILDING.md).
 - `PrismLauncher-Windows-MSVC-Setup-11.1.1.exe` in the repository root is a Prism Launcher installer that predates the
   source. It is 24 MB, unused by the build, and a likely candidate for removal.
 
@@ -107,6 +107,6 @@ git commit-tree <tree-id> -p HEAD -p upstream/develop -m "Merge upstream Prism L
 ```
 
 After that merge commit exists, upstream's history is an ancestor and later syncs are plain `git merge upstream/develop`.
-Expect modify/delete conflicts for `.github/` (keep it deleted) and real conflicts where SOL changed the same code
+Expect conflicts in `.github/` (keep SOL's own `build.yml`, drop upstream's other files) and real conflicts where SOL changed the same code
 (themes, the main window, the instance grid, branding); resolve those in favour of SOL's layout while taking
 upstream's behaviour changes.

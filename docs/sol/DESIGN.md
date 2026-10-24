@@ -1,7 +1,7 @@
 # SOL Launcher design notes
 
-The brief: a distinct visual identity ("something like whitish purple, but not AI-vibecoded purple"), a simple iceberg
-logo, and a restructured main window with sidebar navigation, all implemented in the existing Qt Widgets code base.
+The brief: a distinct visual identity ("something like whitish purple, but not AI-vibecoded purple"), a very simple
+logo (an iceberg, then simplified further), and a restructured main window with sidebar navigation, all implemented in the existing Qt Widgets code base.
 
 ## Screenshots
 
@@ -14,9 +14,11 @@ Windows the same screens render in Segoe UI.
 | ![Main window, SOL Light](screenshots/main-light.png) | ![Main window, SOL Dark](screenshots/main-dark.png) |
 | ![Settings, SOL Light](screenshots/settings-light.png) | ![Settings, SOL Dark](screenshots/settings-dark.png) |
 
-The first-run / empty library state:
+The first-run / empty library state, and the guided Microsoft sign-in setup:
 
-![Empty library, SOL Light](screenshots/empty-state-light.png)
+| | |
+| --- | --- |
+| ![Empty library, SOL Light](screenshots/empty-state-light.png) | ![Microsoft sign-in setup](screenshots/msa-setup-light.png) |
 
 ## Principles
 
@@ -130,12 +132,36 @@ drag-and-drop import, context menus, keyboard shortcuts, running / crashed statu
 
 ## Logo
 
-A simple iceberg: a lit tip above the waterline, a larger submerged mass below, separated by a thin gap. Two flat
-tones per facet, no strokes, legible at 16 px. The application icon puts it on a dark ink-violet rounded tile; the plain
-marks (for light and dark pages) are `program_info/io.github.solfain.SOLLauncher.logo*.svg`.
+One shape: **a diamond split at the waterline**. The lit tip above the line is the part of the iceberg you see, the larger,
+calmer mass below it is the part you don't. Two flat tones with a thin gap for the waterline, no strokes, one bold
+silhouette that is still legible at 16 px. The application icon puts it on a dark ink-violet rounded tile; the plain marks
+(for light and dark pages) are `program_info/io.github.solfain.SOLLauncher.logo*.svg`.
 
-`program_info/gen_sol_icons.py` regenerates every icon format (SVG, PNG, Windows `.ico`, macOS `.icns` and the macOS
-26 icon layers, plus the in-app `launcher.svg`) from the geometry and colours in that one file
-(`pip install PySide6-Essentials Pillow`).
+`program_info/gen_sol_icons.py` regenerates every icon format (SVG, PNG, Windows `.ico`, macOS `.icns` and the macOS 26
+icon layers, plus the in-app `launcher.svg`) from one definition of the mark
+(`pip install PySide6-Essentials Pillow`). Four alternates that were considered stay available behind a flag:
+`python3 program_info/gen_sol_icons.py --mark gem|shard|floe|frost` (`--list` shows them): the same diamond split
+vertically, a single two-facet shard, the previous iceberg silhouette, and a six-spoke frost crystal.
 
 Logo and icons are original to SOL Launcher; they are not Prism Launcher artwork.
+
+## Icons
+
+Toolbar, menu, page-list and message-box icons are one thin line set: 45 [Lucide](https://lucide.dev) drawings (ISC licence,
+copied unmodified into `launcher/resources/sol_icons/lucide/`) mapped to the names the launcher already asks for.
+`launcher/resources/sol_icons/generate_icons.py` colours them from `tokens.json`: muted ink for ordinary icons, the success /
+warning / danger colours for the status icons, 1.75 px strokes.
+
+The theme is **adaptive**. Choosing the icon theme "SOL Line" means "the strokes that read on the active palette": it resolves
+to the dark-stroke set on light themes and to the light-stroke set (`sol_white`, hidden from the lists) on dark ones, and is
+re-resolved whenever an application theme is applied. The old flat / flat_white pair had to be chosen by hand to match the
+theme, and a mismatch meant invisible icons. Both sets inherit from the flat themes, so the Discord and Reddit brand glyphs
+(which have no line equivalent) still resolve. Message boxes use the same icons (a warning is the palette's amber, an error
+its red) while a SOL icon theme is active.
+
+## Motion
+
+Small, quick and never in the way. Hover and selection of an instance card ease over 140 ms (out-cubic, on a timer that only
+runs while something moves), so moving across the grid cross-fades the cards instead of flicking them. A classic mouse wheel
+scrolls with a 180 ms ease; touchpads keep their own smooth scrolling. Nothing animates that the user is waiting on, and
+nothing animates a layout.
