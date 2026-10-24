@@ -176,15 +176,22 @@ include(CTest)
 ##################################### Set Application options #####################################
 
 ######## Set URLs ########
-set(Launcher_NEWS_RSS_URL "https://prismlauncher.org/feed/feed.xml" CACHE STRING "URL to fetch Prism Launcher's news RSS feed from.")
-set(Launcher_NEWS_OPEN_URL "https://prismlauncher.org/news" CACHE STRING "URL that gets opened when the user clicks 'More News'")
-set(Launcher_WIKI_URL "https://prismlauncher.org/wiki/" CACHE STRING "URL that gets opened when the user clicks 'Launcher Help'")
+# SOL Launcher: community / news endpoints that belong to the Prism Launcher project are not advertised from SOL.
+# Empty values hide the matching UI (news bar, Discord / Matrix / Reddit menu entries).
+# Endpoints that are functional dependencies (version metadata, legacy Forge libraries, translation files, in-dialog
+# help pages, the browser page shown after a successful Microsoft login) intentionally keep pointing at the services
+# Prism Launcher runs, see docs/sol/FORK_NOTES.md. Override any of them with -DLauncher_<NAME>=... if you host your own.
+set(Launcher_NEWS_RSS_URL "" CACHE STRING "URL to fetch the launcher's news RSS feed from (empty: no news bar).")
+set(Launcher_NEWS_OPEN_URL "" CACHE STRING "URL that gets opened when the user clicks 'More News'")
+set(Launcher_WIKI_URL "https://github.com/solfain/prism-remake#readme" CACHE STRING "URL that gets opened when the user clicks 'Launcher Help'")
 set(Launcher_HELP_URL "https://prismlauncher.org/wiki/help-pages/%1" CACHE STRING "URL (with arg %1 to be substituted with page-id) that gets opened when the user requests help in a dialog window")
 set(Launcher_LOGIN_CALLBACK_URL "https://prismlauncher.org/successful-login" CACHE STRING "URL that gets opened when the user successfully logins.")
 set(Launcher_LEGACY_FMLLIBS_BASE_URL "https://files.prismlauncher.org/fmllibs/" CACHE STRING "URL for legacy (<=1.5.2) FML Libraries.")
 
 ######## Set version numbers ########
-set(Launcher_VERSION_MAJOR 12)
+# SOL Launcher's own version line. (Code base: Prism Launcher "develop" @ 6f57239, which identifies itself as 12.0.0.)
+# These numbers only feed version metadata (about dialog, Windows file properties, installer) and the updater.
+set(Launcher_VERSION_MAJOR 1)
 set(Launcher_VERSION_MINOR 0)
 set(Launcher_VERSION_PATCH 0)
 
@@ -196,32 +203,33 @@ set(Launcher_VERSION_NAME4_COMMA "${Launcher_VERSION_MAJOR},${Launcher_VERSION_M
 set(Launcher_BUILD_PLATFORM "unknown" CACHE STRING "A short string identifying the platform that this build was built for. Only used to display in the about dialog.")
 
 # Github repo URL with releases for updater
-set(Launcher_UPDATER_GITHUB_REPO "https://github.com/PrismLauncher/PrismLauncher" CACHE STRING "Base github URL for the updater.")
+# (The updater is only built when Launcher_BUILD_ARTIFACT is also set, so it stays off until SOL publishes releases.)
+set(Launcher_UPDATER_GITHUB_REPO "https://github.com/solfain/prism-remake" CACHE STRING "Base github URL for the updater.")
 
 # Name to help updater identify valid artifacts
 set(Launcher_BUILD_ARTIFACT "" CACHE STRING "Artifact name to help the updater identify valid artifacts.")
 
-# The metadata server
+# The metadata server (Minecraft / loader version lists). SOL uses the Prism Launcher project's public metadata for now.
 set(Launcher_META_URL "https://meta.prismlauncher.org/v1/" CACHE STRING "URL to fetch Launcher's meta files from.")
 
-# Imgur API Client ID
-set(Launcher_IMGUR_CLIENT_ID "5b97b0713fba4a3" CACHE STRING "Client ID you can get from Imgur when you register an application")
+# Imgur API Client ID (empty: the screenshot "Upload" action is hidden)
+set(Launcher_IMGUR_CLIENT_ID "" CACHE STRING "Client ID you can get from Imgur when you register an application")
 
 # Bug tracker URL
-set(Launcher_BUG_TRACKER_URL "https://github.com/PrismLauncher/PrismLauncher/issues" CACHE STRING "URL for the bug tracker.")
+set(Launcher_BUG_TRACKER_URL "https://github.com/solfain/prism-remake/issues" CACHE STRING "URL for the bug tracker.")
 
-# Translations Platform URL
+# Translations Platform URL (SOL shares Prism Launcher's translation files and Weblate project)
 set(Launcher_TRANSLATIONS_URL "https://hosted.weblate.org/projects/prismlauncher/launcher/" CACHE STRING "URL for the translations platform.")
 set(Launcher_TRANSLATION_FILES_URL "https://i18n.prismlauncher.org/" CACHE STRING "URL for the translations files.")
 
-# Matrix Space
-set(Launcher_MATRIX_URL "https://prismlauncher.org/matrix" CACHE STRING "URL to the Matrix Space")
+# Matrix Space (empty: menu entry hidden)
+set(Launcher_MATRIX_URL "" CACHE STRING "URL to the Matrix Space")
 
-# Discord URL
-set(Launcher_DISCORD_URL "https://prismlauncher.org/discord" CACHE STRING "URL for the Discord guild.")
+# Discord URL (empty: menu entry hidden)
+set(Launcher_DISCORD_URL "" CACHE STRING "URL for the Discord guild.")
 
-# Subreddit URL
-set(Launcher_SUBREDDIT_URL "https://prismlauncher.org/reddit" CACHE STRING "URL for the subreddit.")
+# Subreddit URL (empty: menu entry hidden)
+set(Launcher_SUBREDDIT_URL "" CACHE STRING "URL for the subreddit.")
 
 # Builds
 set(Launcher_QT_VERSION_MAJOR "6" CACHE STRING "Major Qt version to build against")
@@ -257,21 +265,24 @@ elseif(WIN32)
 endif()
 
 # API Keys
-# NOTE: These API keys are here for convenience. If you rebrand this software or intend to break the terms of service
-# of these platforms, please change these API keys beforehand.
-# Be aware that if you were to use these API keys for malicious purposes they might get revoked, which might cause
-# breakage to thousands of users.
-# If you don't plan to use these features of this software, you can just remove these values.
+# SOL Launcher is a rebranded derivative of Prism Launcher, so it does NOT ship Prism Launcher's API keys. Upstream asks
+# derivative works to either use their own keys or leave these empty (see "Forking/Redistributing/Custom builds policy"
+# in the upstream README), and CurseForge requires derivative works to use their own key.
+# With empty values the program still builds and runs; the features that need a key are disabled until one is provided:
+#   - Microsoft sign-in:  the "Add Microsoft account" action is hidden until a client ID is set
+#   - CurseForge:         CurseForge browsing / modpack lookups are disabled until a key is set
+#   - Imgur:              the screenshot "Upload" action is hidden
+# Provide your own at build time (-DLauncher_MSA_CLIENT_ID=... -DLauncher_CURSEFORGE_API_KEY=...) or at run time in
+# Settings > APIs (those fields override the build-time value). See docs/sol/FORK_NOTES.md.
 
-# By using this key in your builds you accept the terms of use laid down in
+# Register an application with the Microsoft Identity Platform to get a client ID; using one in your builds means you
+# accept the terms of use laid down in
 # https://docs.microsoft.com/en-us/legal/microsoft-identity-platform/terms-of-use
-set(Launcher_MSA_CLIENT_ID "c36a9fb6-4f2a-41ff-90bd-ae7cc92031eb" CACHE STRING "Client ID you can get from Microsoft Identity Platform when you register an application")
+set(Launcher_MSA_CLIENT_ID "" CACHE STRING "Client ID you can get from Microsoft Identity Platform when you register an application")
 
-# By using this key in your builds you accept the terms and conditions laid down in
+# Request your own key from CurseForge; using one in your builds means you accept the terms and conditions laid down in
 # https://support.curseforge.com/en/support/solutions/articles/9000207405-curse-forge-3rd-party-api-terms-and-conditions
-# NOTE: CurseForge requires you to change this if you make any kind of derivative work.
-# This key was issued specifically for Prism Launcher
-set(Launcher_CURSEFORGE_API_KEY "$2a$10$wuAJuNZuted3NORVmpgUC.m8sI.pv1tOPKZyBgLFGjxFp/br0lZCC" CACHE STRING "API key for the CurseForge platform")
+set(Launcher_CURSEFORGE_API_KEY "" CACHE STRING "API key for the CurseForge platform")
 
 set(Launcher_COMPILER_NAME ${CMAKE_CXX_COMPILER_ID})
 set(Launcher_COMPILER_VERSION ${CMAKE_CXX_COMPILER_VERSION})
@@ -377,7 +388,7 @@ include(ECMQtDeclareLoggingCategory)
 
 ####################################### Program Info #######################################
 
-set(Launcher_APP_BINARY_NAME "prismlauncher" CACHE STRING "Name of the Launcher binary")
+set(Launcher_APP_BINARY_NAME "sollauncher" CACHE STRING "Name of the Launcher binary")
 add_subdirectory(program_info)
 
 ####################################### Install layout #######################################
@@ -411,8 +422,10 @@ if(UNIX AND APPLE)
     set(MACOSX_BUNDLE_LONG_VERSION_STRING "${Launcher_VERSION_NAME}")
     set(MACOSX_BUNDLE_ICON_FILE ${Launcher_Name}.icns)
     set(MACOSX_BUNDLE_COPYRIGHT "${Launcher_Copyright_Mac}")
-    set(MACOSX_SPARKLE_UPDATE_PUBLIC_KEY "v55ZWWD6QlPoXGV6VLzOTZxZUggWeE51X8cRQyQh6vA=" CACHE STRING "Public key for Sparkle update feed")
-    set(MACOSX_SPARKLE_UPDATE_FEED_URL "https://prismlauncher.org/feed/appcast.xml" CACHE STRING "URL for Sparkle update feed")
+    # SOL: no update feed yet. These must not point at Prism Launcher's feed/signing key, or SOL would offer to
+    # replace itself with Prism Launcher builds. Set both once SOL publishes its own signed appcast.
+    set(MACOSX_SPARKLE_UPDATE_PUBLIC_KEY "" CACHE STRING "Public key for Sparkle update feed")
+    set(MACOSX_SPARKLE_UPDATE_FEED_URL "" CACHE STRING "URL for Sparkle update feed")
 
     set(MACOSX_SPARKLE_DOWNLOAD_URL "https://github.com/sparkle-project/Sparkle/releases/download/2.9.6/Sparkle-2.9.6.tar.xz" CACHE STRING "URL to Sparkle release archive")
     set(MACOSX_SPARKLE_SHA256 "52bf9e88cdd972fc0c81501377a880e90d47031bd8ca5462488f843e2609e192" CACHE STRING "SHA256 checksum for Sparkle release archive")

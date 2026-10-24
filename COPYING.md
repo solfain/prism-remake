@@ -1,3 +1,28 @@
+## SOL Launcher
+
+     SOL Launcher - Minecraft Launcher
+     Copyright (C) 2026 SOL Launcher Contributors
+
+     SOL Launcher is an independent project based on Prism Launcher (see below). It is
+     distributed under the same terms as Prism Launcher.
+
+     This program is free software: you can redistribute it and/or modify
+     it under the terms of the GNU General Public License as published by
+     the Free Software Foundation, version 3.
+
+     This program is distributed in the hope that it will be useful,
+     but WITHOUT ANY WARRANTY; without even the implied warranty of
+     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+     GNU General Public License for more details.
+
+     You should have received a copy of the GNU General Public License
+     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+     SOL Launcher is not Prism Launcher and is not endorsed by or affiliated with the
+     Prism Launcher project. The modifications made to the Prism Launcher source code are
+     recorded in the git history (the first commit of the SOL branch is an unmodified
+     snapshot of Prism Launcher) and summarised in docs/sol/CHANGES.md.
+
 ## Prism Launcher
 
      Prism Launcher - Minecraft Launcher

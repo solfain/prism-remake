@@ -54,8 +54,10 @@ QString getCreditsHtml()
     QString fileContent = QString::fromUtf8(dataFile.readAll());
     dataFile.close();
 
-    return fileContent.arg(QObject::tr("%1 Developers").arg(BuildConfig.LAUNCHER_DISPLAYNAME), QObject::tr("MultiMC Developers"),
-                           QObject::tr("With special thanks to"));
+    // The developer list below the first heading is Prism Launcher's: SOL is based on their work and must not be
+    // presented as the author of it, so it gets its own heading.
+    return fileContent.arg(QObject::tr("%1 Contributors").arg(BuildConfig.LAUNCHER_DISPLAYNAME), QObject::tr("Prism Launcher Developers"),
+                           QObject::tr("MultiMC Developers"), QObject::tr("With special thanks to"));
 }
 
 QString getLicenseHtml()
@@ -88,6 +90,13 @@ AboutDialog::AboutDialog(QWidget* parent) : QDialog(parent), ui(new Ui::AboutDia
     ui->licenseText->setHtml(StringUtils::htmlListPatch(lhtml));
 
     ui->urlLabel->setOpenExternalLinks(true);
+    ui->aboutLabel->setOpenExternalLinks(true);
+    ui->aboutLabel->setText(
+        tr("<html><head/><body><p>A custom launcher that makes managing Minecraft easier by allowing you to have multiple instances of "
+           "Minecraft at once.</p><p>%1 is an independent project based on the free software "
+           "<a href=\"https://prismlauncher.org\">Prism Launcher</a>. It is not Prism Launcher and is not endorsed by or affiliated "
+           "with the Prism Launcher project.</p></body></html>")
+            .arg(launcherName));
 
     ui->icon->setPixmap(APPLICATION->logo().pixmap(64));
     ui->title->setText(launcherName);

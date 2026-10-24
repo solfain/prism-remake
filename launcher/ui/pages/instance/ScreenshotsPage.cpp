@@ -279,6 +279,10 @@ ScreenshotsPage::ScreenshotsPage(QString path, QWidget* parent)
     ui->setupUi(this);
     ui->toolBar->insertSpacer(ui->actionView_Folder);
 
+    // Uploading needs an Imgur API client id. None is bundled with SOL Launcher (see CMakeLists.txt), so the action is
+    // hidden unless one was provided at build time.
+    ui->actionUpload->setVisible(!BuildConfig.IMGUR_CLIENT_ID.isEmpty());
+
     ui->listView->setIconSize(QSize(128, 128));
     ui->listView->setGridSize(QSize(192, 160));
     ui->listView->setSpacing(9);
